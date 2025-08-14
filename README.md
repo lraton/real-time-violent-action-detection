@@ -5,6 +5,7 @@ This project implements a real-time detection system to identify potentially dan
 ---
 
 ##  Technologies and Tools
+- **PyTorch**: ``` pip install torch torchvision numpy scikit-learn opencv-python ```
 
 - **YOLO (You Only Look Once)**: Object detection with Ultralytics.
     
