@@ -7,6 +7,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 import numpy as np
 import warnings
+from glob import glob # Aggiungi questa libreria
 
 # Ignora i warning per un output più pulito
 warnings.filterwarnings("ignore")
@@ -26,25 +27,35 @@ class PoseDataset(Dataset):
         return len(self.data_list)
 
     def __getitem__(self, idx):
-        file_path, label = self.data_list[idx]
-        
-        # Carica i keypoint dal file JSON
+        folder_path, label = self.data_list[idx] # Ora l'input è il percorso della cartella, non del file
+
+        # Cerca tutti i file JSON all'interno della cartella
         try:
-            with open(file_path, 'r') as f:
-                keypoint_data = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            print(f"Warning: Could not load or parse file {file_path}. Skipping.")
-            return None, None # Restituisce None per poterlo filtrare nel DataLoader
+            json_files = sorted(glob(os.path.join(folder_path, '*.json')))
+        except Exception:
+            print(f"Warning: Could not find any json files in {folder_path}. Skipping.")
+            return None, None
+
+        if not json_files:
+            print(f"Warning: No keypoint files found in {folder_path}. Skipping.")
+            return None, None
 
         keypoints = []
-        for frame in keypoint_data:
-            if 'people' in frame and len(frame['people']) > 0:
-                body_parts = frame['people'][0]['pose_keypoints_2d']
-                coords = [(body_parts[i], body_parts[i+1]) for i in range(0, len(body_parts), 3)]
-                keypoints.append(coords)
-        
+        for file_path in json_files:
+            try:
+                with open(file_path, 'r') as f:
+                    frame_data = json.load(f)
+                    if 'people' in frame_data and len(frame_data['people']) > 0:
+                        body_parts = frame_data['people'][0]['pose_keypoints_2d']
+                        # Estrai solo le coordinate (x, y) e ignorare la confidenza (score)
+                        coords = [(body_parts[i], body_parts[i+1]) for i in range(0, len(body_parts), 3)]
+                        keypoints.append(coords)
+            except (FileNotFoundError, json.JSONDecodeError):
+                print(f"Warning: Could not load or parse file {file_path}. Skipping.")
+                continue
+
         if not keypoints:
-            print(f"Warning: No keypoints found in {file_path}. Skipping.")
+            print(f"Warning: No keypoints found in {folder_path} after processing. Skipping.")
             return None, None
 
         keypoints = np.array(keypoints, dtype=np.float32)
@@ -68,6 +79,7 @@ class PoseDataset(Dataset):
 
 # --- 2. Definizione del Modello CNN+LSTM in PyTorch ---
 class ActionRecognitionModel(nn.Module):
+    # Il codice di questa classe rimane identico
     def __init__(self, num_classes, num_keypoints=25, hidden_size=128):
         super(ActionRecognitionModel, self).__init__()
         
@@ -114,9 +126,10 @@ class ActionRecognitionModel(nn.Module):
 
 # --- 3. Caricamento dei Dati e Addestramento ---
 if __name__ == "__main__":
-    # Assicurati che i file e le directory esistano
-    violent_path = "dataset/violent"
-    non_violent_path = "dataset/non-violent"
+    # La logica di caricamento dei dati è leggermente diversa
+    violent_path = "json_output/violent"
+    non_violent_path = "json_output/non-violent"
+    
     if not os.path.exists(violent_path) or not os.path.exists(non_violent_path):
         print("Error: Dataset directories not found. Please check your path configuration.")
         exit()
@@ -128,12 +141,14 @@ if __name__ == "__main__":
         with open('violent.txt', 'r') as f:
             for line in f:
                 file_name, actions = line.strip().split(';')
+                video_name = file_name.replace('.mp4', '')
                 if 'stab' in actions:
                     for cam in ['cam1', 'cam2']:
-                        data_list.append((os.path.join(violent_path, cam, file_name.replace('.mp4', '.json')), 'stab'))
+                        # Ora aggiungi il percorso della CARTELLA di output, non del file .json
+                        data_list.append((os.path.join(violent_path, cam, video_name), 'stab'))
                 else:
                     for cam in ['cam1', 'cam2']:
-                        data_list.append((os.path.join(violent_path, cam, file_name.replace('.mp4', '.json')), 'other_violent'))
+                        data_list.append((os.path.join(violent_path, cam, video_name), 'other_violent'))
     except FileNotFoundError:
         print("Error: violent.txt not found.")
         exit()
@@ -143,8 +158,9 @@ if __name__ == "__main__":
         with open('non-violent.txt', 'r') as f:
             for line in f:
                 file_name, _ = line.strip().split(';')
+                video_name = file_name.replace('.mp4', '')
                 for cam in ['cam1', 'cam2']:
-                    data_list.append((os.path.join(non_violent_path, cam, file_name.replace('.mp4', '.json')), 'non-violent'))
+                    data_list.append((os.path.join(non_violent_path, cam, video_name), 'non-violent'))
     except FileNotFoundError:
         print("Error: non-violent.txt not found.")
         exit()
