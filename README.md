@@ -11,9 +11,9 @@ This project implements a real-time detection system to identify potentially dan
     
 - **Roboflow**: Data management and preprocessing.
     
-- **OpenPose**: Human pose estimation.
+- **MediaPipe**: Human pose estimation.
     
-    - [OpenPose GitHub](https://github.com/CMU-Perceptual-Computing-Lab/openpose)
+    - [MediaPipe Google](ai.google.dev/edge/mediapipe/solutions/guide?hl=it)
         
 - **Violence Detection Dataset**: Dataset specifically designed for identifying violent actions.
     
@@ -34,7 +34,7 @@ This project implements a real-time detection system to identify potentially dan
             
     - Associate detected knives with the closest identified hand/person.
         
-2. **Pose Estimation (OpenPose)**:
+2. **Pose Estimation (mediapipe / YOLO)**:
     
     - Extract keypoints such as wrists, elbows, and shoulders.
         
