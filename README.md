@@ -5,13 +5,13 @@ This project implements a real-time detection system to identify potentially dan
 ---
 
 ##  Technologies and Tools
-- **PyTorch**: ``` pip install torch torchvision numpy scikit-learn opencv-python ```
+- ~~**PyTorch**: ``` pip install torch torchvision numpy scikit-learn opencv-python ``` ~~
 
 - **YOLO (You Only Look Once)**: Object detection with Ultralytics.
     
 - **Roboflow**: Data management and preprocessing.
     
-- **MediaPipe**: Human pose estimation.
+- ~~**MediaPipe**: Human pose estimation.~~
     
     - [MediaPipe Google](ai.google.dev/edge/mediapipe/solutions/guide?hl=it)
         
@@ -34,13 +34,13 @@ This project implements a real-time detection system to identify potentially dan
             
     - Associate detected knives with the closest identified hand/person.
         
-2. **Pose Estimation (mediapipe / YOLO)**:
+2. **Pose Estimation (YOLO)**:
     
     - Extract keypoints such as wrists, elbows, and shoulders.
         
     - Calculate and track **motion vectors** of arms and hands.
         
-3. **Motion Analysis**:
+3. **Human Activity Recognition HAR**:
     
     - Use machine learning methods (e.g., LSTM or CNN) to classify motion patterns over time.
         
