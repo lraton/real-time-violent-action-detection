@@ -34,7 +34,7 @@ class YOLOCameraApp:
         self.model_knife = YOLO(knife_model_path)
         self.model_pose = YOLO(pose_model_path)
 
-        self.saved_faces_ids = set() # Per evitare salvataggi duplicati di volti
+        self.saved_faces_ids = set()  # Per evitare salvataggi duplicati di volti
 
         # Tkinter GUI
         self.root = tk.Tk()
@@ -61,7 +61,7 @@ class YOLOCameraApp:
         self.cap.set(4, 480)
 
     # --- Estrazione Volto Sospetto ---
-    def extract_suspicious_face(self, frame, person_keypoints, person_box):
+    def extract_suspicious_face(self, frame, person_keypoints, person_box, person_id):
         # person_keypoints è un array di 17 keypoints (x, y)
         # Keypoints: Naso (0), Occhi (1, 2), Orecchie (3, 4)
         face_kpts = person_keypoints[:5]
@@ -107,7 +107,13 @@ class YOLOCameraApp:
 
         # 5. Taglia e restituisce il volto
         face_image = frame[y1:y2, x1:x2]
-        return face_image
+        if face_image is not None and face_image.size > 0:
+            face_filename = f"../suspect/face_susp_{person_id}_"+time.strftime(
+                '%b-%d-%Y_%H%M')+".jpg"
+            cv2.imwrite(face_filename, face_image)
+            print(
+                f"Volto sospetto salvato: {face_filename}")
+            self.saved_faces_ids.add(person_id)
 
     # --- Detection oggetti ---
     def detect_objects(self, frame):
@@ -135,20 +141,19 @@ class YOLOCameraApp:
 
     # --- Pose ---
 
-
     def detect_pose(self, frame, detected_items):
         for obj in detected_items:
             x1, y1, x2, y2 = obj["box"]
             class_name = obj["class"]
             conf = obj["conf"]
-            cls = obj["cls"] 
+            cls = obj["cls"]
 
             colour = get_colours(cls)
             cv2.rectangle(frame, (x1, y1), (x2, y2), colour, 2)
             cv2.putText(frame, f"{class_name} {conf:.2f}",
                         (x1, max(y1 - 10, 20)), cv2.FONT_HERSHEY_SIMPLEX,
                         0.6, colour, 2)
-            
+
         clean_frame_for_save = frame.copy()
 
         detected_persons = set()
@@ -197,21 +202,18 @@ class YOLOCameraApp:
 
                         if inside:
                             # Salva il volto sospetto solo se non è già stato salvato
-                            if person_id not in self.saved_faces_ids: 
+                            if person_id not in self.saved_faces_ids:
                                 # Estrai e salva il volto sospetto
-                                face_img = self.extract_suspicious_face(
-                                    clean_frame_for_save, person, person_box)
-                                if face_img is not None and face_img.size > 0:
-                                    face_filename = f"../suspect/face_susp_{person_id}_"+time.strftime('%b-%d-%Y_%H%M')+".jpg"
-                                    cv2.imwrite(face_filename, face_img)
-                                    print(f"Volto sospetto salvato: {face_filename}")
-                                    self.saved_faces_ids.add(person_id)
+                                self.extract_suspicious_face(
+                                    clean_frame_for_save, person, person_box, person_id)
                             else:
-                                print(f"Volto sospetto per ID {person_id} già salvato.")
+                                print(
+                                    f"Volto sospetto per ID {person_id} già salvato.")
 
                             cv2.putText(frame, f"Sospetto {person_id}", (x1, max(
                                 y1 - 10, 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, box_color, 2)
-                            detected_persons.add(f"Sospetto {person_id} (ARMA)")
+                            detected_persons.add(
+                                f"Sospetto {person_id} (ARMA)")
                         else:
                             cv2.putText(frame, f"Persona {person_id}", (x1, max(
                                 y1 - 10, 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, box_color, 2)
@@ -227,7 +229,7 @@ class YOLOCameraApp:
                             x1_k, y1_k = person[i]
                             x2_k, y2_k = person[j]
                             cv2.line(frame, (int(x1_k), int(y1_k)),
-                                    (int(x2_k), int(y2_k)), colour, 2)
+                                     (int(x2_k), int(y2_k)), colour, 2)
 
         return frame, detected_persons
 
@@ -241,10 +243,12 @@ class YOLOCameraApp:
         detected_items = self.detect_objects(frame)
 
         # Pose: Ritorna il frame con i disegni
-        frame_drawn, detected_persons = self.detect_pose(frame, detected_items) # Passa il frame originale
+        frame_drawn, detected_persons = self.detect_pose(
+            frame, detected_items)  # Passa il frame originale
 
         # Unisci oggetti e persone
-        object_names = {f"{obj['class']} {obj['conf']:.2f}" for obj in detected_items}
+        object_names = {
+            f"{obj['class']} {obj['conf']:.2f}" for obj in detected_items}
         all_detected = object_names.union(detected_persons)
 
         # Aggiorna lista a destra
