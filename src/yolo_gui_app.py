@@ -30,10 +30,10 @@ SKELETON = [
 
 
 class YOLOCameraApp:
-    def __init__(self, knife_model_path="yolo11n.pt", pose_model_path="yolo11n-pose.pt"):
+    def __init__(self, knife_model_path="models/knife/runs/detect/train3/weights/best.pt", pose_model_path="yolo11n-pose.pt"):
         self.model_knife = YOLO(knife_model_path)
         self.model_pose = YOLO(pose_model_path)
-
+        
         self.saved_faces_ids = set()  # Per evitare salvataggi duplicati di volti
 
         # Tkinter GUI
@@ -271,9 +271,3 @@ class YOLOCameraApp:
         self.update_frame()
         self.root.mainloop()
         self.cap.release()
-
-
-# --- Avvio ---
-if __name__ == "__main__":
-    app = YOLOCameraApp()
-    app.run()

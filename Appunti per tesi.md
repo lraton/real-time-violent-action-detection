@@ -1,7 +1,8 @@
 # Appunti per la tesi
 
-- Usare yol oper riconoscere coltelli e azioni delle persone
+- Usare yolo oper riconoscere coltelli e azioni delle persone
   - https://docs.ultralytics.com/
+- Coco-pose per train delle pose
 - ALternative per le pose
   - MediaPipe Pose, MoveNet, PoseNet, AlphaPose, ViTPose/HRNet
   - https://pmc.ncbi.nlm.nih.gov/articles/PMC11566680/
