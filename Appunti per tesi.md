@@ -16,5 +16,8 @@
   - Fine Tuning per coltelli
   - Catastrophic Forgetting
 
+- creare dataset dai video per ltsm
+  - https://medium.com/augmented-startups/tennis-shot-identification-using-yolov7-pose-estimation-and-lstm-b82bc9c9e542
+
 - HAR Human Activity Recognition
   - https://www.nature.com/articles/s41598-025-01898-z
