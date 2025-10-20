@@ -84,7 +84,6 @@ class YOLOCameraApp:
         width_expansion = int(kpt_width * 0.1)
 
         # Estendiamo in altezza in alto e in basso
-        # Espansione significativa in alto (per fronte e capelli)
         y_expansion_top = int(kpt_height * 2.5)
         # Espansione in basso (per mento e collo)
         y_expansion_bottom = int(kpt_height * 1)
