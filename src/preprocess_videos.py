@@ -1,18 +1,13 @@
 from ultralytics import YOLO
+from natsort import natsorted
 import numpy as np
 import cv2
+import os
 
 # Carica il modello
 model_pose = YOLO("yolo11n-pose.pt")
 
-# Avvia il tracking sul video
-results_generator = model_pose.track(
-    '../video-dataset/violent/cam1/1.mp4', 
-    tracker="botsort.yaml", 
-    persist=True, 
-    stream=True,
-    verbose=False
-)
+path_to_video = '../video-dataset/violent/cam1/'
 
 # INDICI DEI KEYPOINT NEL FORMATO COCO (usato da YOLO)
 # 5: spalla sinistra (left_shoulder)
@@ -20,51 +15,89 @@ results_generator = model_pose.track(
 LEFT_SHOULDER_IDX = 5
 RIGHT_SHOULDER_IDX = 6
 
-# Itera sui risultati di ogni frame
-for frame_result in results_generator:
-    
-    if frame_result.boxes.id is not None:
+def main():
+    for filename in natsorted(os.listdir(path_to_video)):
+
+        people_data = {}  # {person_id: [frames]} dati per ogni persona per video
+
+        # Avvia il tracking sul video 
+        results_generator = model_pose.track(
+            path_to_video + filename,
+            tracker="botsort.yaml",
+            #persist=True,
+            stream=True,
+            verbose=False
+        )
         
-        person_ids = frame_result.boxes.id.cpu().numpy().astype(int)
-        keypoints_normalized = frame_result.keypoints.xyn.cpu().numpy()
+        print(f"Video {filename}")
+        # Processa ogni frame del video
+        for frame_result in results_generator:
+            if frame_result.boxes.id is not None:
 
-        for i, person_id in enumerate(person_ids):
-            
-            # --- FASE 1: Estrai i keypoint per la persona corrente ---
-            person_keypoints_xyn = keypoints_normalized[i]
-            
-            # --- FASE 2: Calcola il punto centrale del corpo (anchor point) ---
-            left_shoulder = person_keypoints_xyn[LEFT_SHOULDER_IDX]
-            right_shoulder = person_keypoints_xyn[RIGHT_SHOULDER_IDX]
-            
-            # Calcola il punto medio tra le spalle
-            # Procedi solo se le spalle sono state rilevate (coordinate > 0)
-            if left_shoulder.sum() > 0 and right_shoulder.sum() > 0:
-                center_point = (left_shoulder + right_shoulder) / 2
-            else:
-                # Fallback: se le spalle non sono visibili, usa il naso (indice 0) o salta il frame
-                # Per semplicità, qui saltiamo la normalizzazione per questo frame se le spalle mancano
-                center_point = np.array([0.0, 0.0]) # o continua con il frame successivo
-                # continue 
+                person_ids = frame_result.boxes.id.cpu().numpy().astype(int)
+                keypoints_normalized = frame_result.keypoints.xyn.cpu().numpy()
 
-            # --- FASE 3: Sottrai il punto centrale da tutti i keypoint ---
-            # Questo sposta l'origine degli assi (0,0) al centro del torace della persona
-            relative_keypoints = person_keypoints_xyn - center_point
+                # Per ogni persona rilevata nel frame
+                for i, person_id in enumerate(person_ids):
+                    relative_keypoints = normalize_keypoints_relative_to_torso(i, keypoints_normalized)  # Calcola i keypoint relativi
+                    
+                    
+                    conf = frame_result.keypoints.conf[i].cpu().numpy()  # sposta su CPU e converti in NumPy
+                    relative_keypoints_with_conf = np.hstack([relative_keypoints, conf[:, None]])  # Aggiungi la conf come terza colonna
 
-            # --- ORA I TUOI DATI SONO PRONTI PER L'ALLENAMENTO ---
-            print(f"ID Persona: {person_id}")
-            print(f"Coordinate RELATIVE (rispetto al centro del torace):")
-            print(relative_keypoints[:5]) # Stampa solo i primi 5 per brevità
-            print("-" * 30)
+                    if person_id not in people_data:    # Inizializza la lista per la persona se non esiste
+                        people_data[person_id] = []
+                    people_data[person_id].append(relative_keypoints_with_conf)  # Aggiungi i keypoint relativi alla lista della persona
 
-            # Qui salveresti 'relative_keypoints' nel tuo dataset
+                    # Salva i keypoint normalizzati nel dataset                    
+                    save_keypoints_to_dataset(people_data, filename)
 
-    annotated_frame = frame_result.plot()
-    display_frame = cv2.resize(annotated_frame, (1080,720), interpolation=cv2.INTER_AREA)
-    # Mostra il frame nella finestra ridimensionabile
-    cv2.imshow("YOLOv8 Tracking", display_frame)
+            #video_display(frame_result)
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
 
-    if cv2.waitKey(1) & 0xFF == ord("q"):
+        cv2.destroyAllWindows()
+        print(f"People data collected so far: {len(people_data)} individuals.")
         break
 
-cv2.destroyAllWindows()
+# Funzione per normalizzare i keypoint rispetto al centro del torace
+def normalize_keypoints_relative_to_torso(i, keypoints_normalized):
+    person_keypoints_xyn = keypoints_normalized[i]
+
+    left_shoulder = person_keypoints_xyn[LEFT_SHOULDER_IDX]
+    right_shoulder = person_keypoints_xyn[RIGHT_SHOULDER_IDX]
+
+    if left_shoulder.sum() > 0 and right_shoulder.sum() > 0:
+        center_point = (left_shoulder + right_shoulder) / 2
+    else:
+        center_point = np.array([0.0, 0.0])
+
+    relative_keypoints = person_keypoints_xyn - center_point
+
+    return relative_keypoints
+
+#   Salva i keypoint normalizzati nel dataset
+def save_keypoints_to_dataset(people_data, filename):
+    save_path='models/violentvideo/'
+    os.makedirs(save_path, exist_ok=True)
+
+    for pid, frames in people_data.items():
+        if len(frames) == 0:
+            continue  # salta persone senza frame
+
+        person_array = np.array(frames, dtype=np.float32)  # (num_frames, 17, 3)
+        video_name = os.path.splitext(os.path.basename(filename))[0]
+
+        np.savez(f"{save_path}video{video_name}_person{pid}", data=person_array, label=1)
+
+# Funzione per visualizzare il video con i box e i keypoint annotati
+def video_display(frame_result):
+    annotated_frame = frame_result.plot()
+    display_frame = cv2.resize(
+        annotated_frame, (1080, 720), interpolation=cv2.INTER_AREA)
+    # Mostra il frame nella finestra ridimensionabile
+    cv2.imshow("YOLO Tracking", display_frame)
+
+
+if __name__ == '__main__':
+    main()
