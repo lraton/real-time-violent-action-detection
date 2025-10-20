@@ -64,9 +64,10 @@ def main():
                             people_data[person_id] = []
                         people_data[person_id].append(relative_keypoints_with_conf)  # Aggiungi i keypoint relativi alla lista della persona
 
-                #video_display(frame_result)
-                if cv2.waitKey(1) & 0xFF == ord("q"):
-                    break
+                if default_label == 1:
+                    video_display(frame_result)
+                    if cv2.waitKey(1) & 0xFF == ord("q"):
+                        break
 
             cv2.destroyAllWindows()
 
@@ -87,7 +88,7 @@ def main():
             else:
                 # Salva i keypoint di tutte le persone con label 0
                 save_keypoints_to_dataset(people_data, filename, default_label)
-                
+
             print(f"People data collected so far: {len(people_data)} individuals.")
         
 
@@ -127,7 +128,7 @@ def video_display(frame_result):
     display_frame = cv2.resize(
         annotated_frame, (1080, 720), interpolation=cv2.INTER_AREA)
     # Mostra il frame nella finestra ridimensionabile
-    cv2.imshow("YOLO Tracking", display_frame)
+    cv2.imshow("Video Annotation", display_frame)
 
 
 if __name__ == '__main__':
