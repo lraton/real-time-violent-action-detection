@@ -1,4 +1,5 @@
 import cv2
+import os
 import time
 import tkinter as tk
 from tkinter import ttk
@@ -6,9 +7,9 @@ from PIL import Image, ImageTk
 import random
 from ultralytics import YOLO
 
+camera_index = 1  # Modifica questo indice se necessario
+
 # --- Funzione colori ---
-
-
 def get_colours(cls_num: int) -> tuple[int, int, int]:
     random.seed(cls_num)
     while True:
@@ -56,9 +57,9 @@ class YOLOCameraApp:
         self.object_list.pack(fill=tk.Y, expand=True)
 
         # Webcam
-        self.cap = cv2.VideoCapture(0)
-        self.cap.set(3, 640)
-        self.cap.set(4, 480)
+        self.cap = cv2.VideoCapture(camera_index)
+        self.cap.set(3, 1920)
+        self.cap.set(4, 1080)
 
     # --- Estrazione Volto Sospetto ---
     def extract_suspicious_face(self, frame, person_keypoints, person_box, person_id):
@@ -105,6 +106,7 @@ class YOLOCameraApp:
             y2 = p_y1 + (p_y2 - p_y1) // 3
 
         # 5. Taglia e restituisce il volto
+        os.makedirs("../suspect/", exist_ok=True)
         face_image = frame[y1:y2, x1:x2]
         if face_image is not None and face_image.size > 0:
             face_filename = f"../suspect/face_susp_{person_id}_"+time.strftime(
