@@ -6,8 +6,14 @@ from tkinter import ttk
 from PIL import Image, ImageTk
 import random
 from ultralytics import YOLO
+from tensorflow.keras.models import load_model
+from collections import deque
+import numpy as np
 
 camera_index = 1  # Modifica questo indice se necessario
+
+model = load_model("models/lstm_violence_detector.h5")
+sequence = deque(maxlen=150)
 
 # --- Funzione colori ---
 def get_colours(cls_num: int) -> tuple[int, int, int]:
@@ -31,6 +37,15 @@ SKELETON = [
 
 
 class YOLOCameraApp:
+
+    # Costanti per rilevamento violenza
+    VIOLENCE_THRESHOLD = 0.7         # Soglia per classificare come violento
+    COLOR_VIOLENT = (0, 0, 255)      # Rosso (BGR) per comportamento violento
+    COLOR_NON_VIOLENT = (0, 255, 0)  # Verde (BGR) per comportamento non-violento
+    FONT = cv2.FONT_HERSHEY_SIMPLEX
+    FONT_SCALE = 0.6
+    FONT_THICKNESS = 2
+
     def __init__(self, knife_model_path="models/knife/runs/detect/train3/weights/best.pt", pose_model_path="yolo11n-pose.pt"):
         self.model_knife = YOLO(knife_model_path)
         self.model_pose = YOLO(pose_model_path)
@@ -141,7 +156,6 @@ class YOLOCameraApp:
         return detected  # Restituisce solo i dati, non il frame modificato
 
     # --- Pose ---
-
     def detect_pose(self, frame, detected_items):
         for obj in detected_items:
             x1, y1, x2, y2 = obj["box"]
@@ -197,28 +211,43 @@ class YOLOCameraApp:
                                 inside = True
                                 break
 
-                        # Colore per la visualizzazione sullo schermo
-                        colour = get_colours(person_id + 100)
-                        box_color = (0, 0, 255) if inside else colour
+                        # Predizione della violenza basata sui keypoints della persona
+                        violence_score = self.predict_violence(person)
 
-                        if inside:
-                            # Salva il volto sospetto solo se non è già stato salvato
-                            if person_id not in self.saved_faces_ids:
-                                # Estrai e salva il volto sospetto
-                                self.extract_suspicious_face(
-                                    clean_frame_for_save, person, person_box, person_id)
+                        # Se la predizione ha restituito un punteggio valido
+                        if violence_score is not None:
+                            # Determina lo stato (violento/non-violento)
+                            is_violent = violence_score > self.VIOLENCE_THRESHOLD
+                            
+                            if is_violent:
+                                status_text = "VIOLENTA"
+                                box_color = self.COLOR_VIOLENT
                             else:
-                                print(
-                                    f"Volto sospetto per ID {person_id} già salvato.")
+                                status_text = "Non-violenta"
+                                box_color = self.COLOR_NON_VIOLENT
 
-                            cv2.putText(frame, f"Sospetto {person_id}", (x1, max(
-                                y1 - 10, 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, box_color, 2)
-                            detected_persons.add(
-                                f"Sospetto {person_id} (ARMA)")
-                        else:
-                            cv2.putText(frame, f"Persona {person_id}", (x1, max(
-                                y1 - 10, 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, box_color, 2)
-                            detected_persons.add(f"Persona {person_id}")
+                            # Logica per i "sospetti" (persone con coltello)
+                            if inside:
+                                person_prefix = "Sospetto"
+                                detection_entry = f"Sospetto {person_id} (ARMA)"
+                                
+                                # Salva il volto del sospetto, ma solo la prima volta che viene rilevato
+                                if person_id not in self.saved_faces_ids:
+                                    self.extract_suspicious_face(
+                                        clean_frame_for_save, person, person_box, person_id
+                                    )
+                            else:
+                                person_prefix = "Persona"
+                                detection_entry = f"Persona {person_id}"
+
+                            # Etichetta finale da visualizzare
+                            final_label = f"{person_prefix} {person_id} | {status_text} ({violence_score:.2f})"
+                            text_position = (x1, max(y1 - 10, 20))
+                            
+                            cv2.putText(frame, final_label, text_position, self.FONT, self.FONT_SCALE, box_color, self.FONT_THICKNESS)
+                            
+                            # Aggiungi alla lista degli oggetti rilevati
+                            detected_persons.add(detection_entry)
 
                         # Disegna la box della persona sul frame per la visualizzazione
                         cv2.rectangle(frame, (x1, y1), (x2, y2), box_color, 2)
@@ -233,6 +262,49 @@ class YOLOCameraApp:
                                      (int(x2_k), int(y2_k)), colour, 2)
 
         return frame, detected_persons
+    
+    # Normalizza i keypoints rispetto al torso
+    def normalize_keypoints_relative_to_torso(i, keypoints_normalized):
+        person_keypoints_xyn = keypoints_normalized[i]
+
+        left_shoulder = person_keypoints_xyn[5]
+        right_shoulder = person_keypoints_xyn[6]
+
+        if left_shoulder.sum() > 0 and right_shoulder.sum() > 0:
+            center_point = (left_shoulder + right_shoulder) / 2
+        else:
+            center_point = np.array([0.0, 0.0])
+
+        relative_keypoints = person_keypoints_xyn - center_point
+
+        return relative_keypoints
+    
+    # Predizione violenza
+    def predict_violence(self, keypoints):
+        # Normalizza rispetto al torso (coerente con i dati di training)
+        relative_kpts = self.normalize_keypoints_relative_to_torso(0, keypoints)
+
+        # Rimuovi la confidence se presente, mantieni solo (x, y)
+        if relative_kpts.shape[1] == 3:
+            relative_kpts = relative_kpts[:, :2]
+
+        # Appiattisci i keypoint per frame → (17, 2) -> (34,)
+        flattened = relative_kpts.flatten()
+
+        # Aggiungi alla sequenza
+        self.sequence.append(flattened)
+
+        # Mantieni sempre 150 frame al massimo
+        if len(self.sequence) > 150:
+            self.sequence.pop(0)
+
+        # Quando abbiamo 150 frame, predici
+        if len(self.sequence) == 150:
+            data = np.array(self.sequence, dtype=np.float32).reshape(1, 150, -1)
+            pred = self.model.predict(data, verbose=0)[0][0]
+            return float(pred)
+
+        return None
 
     # --- Aggiornamento frame ---
     def update_frame(self):
