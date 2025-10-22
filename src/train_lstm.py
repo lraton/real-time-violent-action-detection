@@ -14,13 +14,13 @@ BATCH_SIZE = 8
 EPOCHS = 30
 
 def main():
-    X, y = [], []  # liste per dati e etichette
+    X, y = [], []  # liste per dati e etichette 
 
     print("Caricamento file .npz...")
     for file in glob.glob(os.path.join(DATA_PATH, "*.npz")):
         data = np.load(file)
-        X.append(data["data"])
-        y.append(int(data["label"]))
+        X.append(data["data"]) # sequenza di keypoints
+        y.append(int(data["label"])) # violent=1, non-violent=0
         print(f"Caricato {os.path.basename(file)}")
 
     print(f"Totale sequenze: {len(X)}")
@@ -30,7 +30,7 @@ def main():
 
     print("\n Training completato!")
 
-def normalize_keypoints(X, y): #
+def normalize_keypoints(X, y): # Normalizza le sequenze di keypoints
     print("Normalizzazione delle sequenze...")
     X = pad_sequences(X, maxlen=MAX_FRAMES, dtype='float32', padding='post', truncating='post')
     X = X.reshape(X.shape[0], X.shape[1], -1)
@@ -48,7 +48,7 @@ def create_and_train_model(X, y):
     model = Sequential([
         Masking(mask_value=0.0, input_shape=(MAX_FRAMES, X.shape[2])),
         LSTM(128, return_sequences=True),
-        Dropout(0.3),
+        Dropout(0.4),
         LSTM(64),
         Dense(32, activation='relu'),
         Dense(1, activation='sigmoid')
@@ -58,8 +58,8 @@ def create_and_train_model(X, y):
     model.summary()
 
     # Callbacks
-    checkpoint = ModelCheckpoint(MODEL_PATH, save_best_only=True, monitor='val_accuracy', mode='max', verbose=1)
-    earlystop = EarlyStopping(monitor='val_loss', patience=8, restore_best_weights=True)
+    checkpoint = ModelCheckpoint(MODEL_PATH, save_best_only=True, monitor='val_loss', mode='min', verbose=1)
+    earlystop = EarlyStopping(monitor='val_loss', patience=8, min_delta=0.001,restore_best_weights=True)
 
     print("Avvio dell'addestramento...")
     model.fit(

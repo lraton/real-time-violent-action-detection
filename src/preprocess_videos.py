@@ -5,12 +5,12 @@ import cv2
 import os
 
 # Carica il modello
-model_pose = YOLO("models/yolo11n-pose.pt")
+model_pose = YOLO("models/pose/weights/best.pt")
 
 # Cartelle dei video
 video_dirs = [
-    '../video-dataset/violent/cam1/',
-    '../video-dataset/violent/cam2/',
+    ##'../video-dataset/violent/cam1/',
+    ##'../video-dataset/violent/cam2/',
     '../video-dataset/non-violent/cam1/',
     '../video-dataset/non-violent/cam2/'
 ]
@@ -23,10 +23,15 @@ def main():
 
     for path_to_video in video_dirs:
         # Imposta la label in base alla cartella
-        if 'violent' in path_to_video:
-            default_label = 1
-        else:
+        if 'non-violent' in path_to_video:
             default_label = 0
+        else:
+            default_label = 1
+
+        if 'cam1' in path_to_video:
+            cam_label = 'cam1'
+        else:
+            cam_label = 'cam2'
 
         for filename in natsorted(os.listdir(path_to_video)):
             if not filename.lower().endswith(('.mp4', '.avi', '.mov')):
@@ -84,10 +89,10 @@ def main():
 
                     # salva i keypoint di questa persona
                     temp_dict = {pid: frames}
-                    save_keypoints_to_dataset(temp_dict, filename, label)
+                    save_keypoints_to_dataset(temp_dict, filename, label, cam_label)
             else:
                 # Salva i keypoint di tutte le persone con label 0
-                save_keypoints_to_dataset(people_data, filename, default_label)
+                save_keypoints_to_dataset(people_data, filename, default_label, cam_label)
 
             print(f"People data collected so far: {len(people_data)} individuals.")
         
@@ -109,7 +114,7 @@ def normalize_keypoints_relative_to_torso(i, keypoints_normalized):
     return relative_keypoints
 
 #   Salva i keypoint normalizzati nel dataset
-def save_keypoints_to_dataset(people_data, filename, label):
+def save_keypoints_to_dataset(people_data, filename, label, cam_label):
     save_path='models/violentvideo/'
     os.makedirs(save_path, exist_ok=True)
 
@@ -120,7 +125,12 @@ def save_keypoints_to_dataset(people_data, filename, label):
         person_array = np.array(frames, dtype=np.float32)  # (num_frames, 17, 3)
         video_name = os.path.splitext(os.path.basename(filename))[0]
 
-        np.savez(f"{save_path}video{video_name}_person{pid}", data=person_array, label=label)
+        if label == 1:
+            np.savez(f"{save_path}violent_video{video_name}_{cam_label}_person{pid}", data=person_array, label=label)
+            print(f"Salvo video violento: {video_name}, {cam_label}, persona ID: {pid}, frames: {person_array.shape[0]}")
+        else:
+            np.savez(f"{save_path}nonviolent_video{video_name}_{cam_label}_person{pid}", data=person_array, label=label)
+            print(f"Salvo video non-violento: {video_name}, {cam_label}, persona ID: {pid}, frames: {person_array.shape[0]}")
 
 # Funzione per visualizzare il video con i box e i keypoint annotati
 def video_display(frame_result):
