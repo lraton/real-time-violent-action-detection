@@ -35,8 +35,7 @@ SKELETON = [
 
 class YOLOCameraApp:
 
-    model = load_model("models/lstm_violence_detector.h5")
-    sequence = deque(maxlen=150)
+    model = load_model("models/lstm_violence_detector.keras")
 
     # Costanti per rilevamento violenza
     VIOLENCE_THRESHOLD = 0.7         # Soglia per classificare come violento
@@ -48,11 +47,21 @@ class YOLOCameraApp:
     PERSON_PREFIX = "Persona"
     STATUS_TEXT = "Non-Violenta"
 
-    def __init__(self, knife_model_path="models/knife/runs/detect/train3/weights/best.pt", pose_model_path="models/pose/weights/best.pt"):
+    def __init__(self, knife_model_path="models/knife/runs/detect/train3/weights/best.pt", pose_model_path="models/yolo8n-pose.pt"):
         self.model_knife = YOLO(knife_model_path)
         self.model_pose = YOLO(pose_model_path)
         
         self.saved_faces_ids = set()  # Per evitare salvataggi duplicati di volti
+        self.person_sequences = {} # Sequenze di keypoints per ogni persona ID
+        # Dizionario per l'ultima predizione di violenza per ogni ID
+        self.person_last_prediction = {} 
+        # Dizionario per il contatore di frame per ogni ID
+        self.person_frame_counter = {}   
+        # Esegui l'LSTM solo 1 volta ogni N frame (prova con 3 o 5)
+        self.PREDICTION_SKIP_FRAMES = 3
+
+        self.prev_time = 0  # Tempo del frame precedente
+        self.fps = 0        # Valore FPS calcolato
 
         # Tkinter GUI
         self.root = tk.Tk()
@@ -75,8 +84,8 @@ class YOLOCameraApp:
 
         # Webcam
         self.cap = cv2.VideoCapture(camera_index)
-        self.cap.set(3, 1280)
-        self.cap.set(4, 720)
+        self.cap.set(3, 640)
+        self.cap.set(4, 480)
 
     # --- Estrazione Volto Sospetto ---
     def extract_suspicious_face(self, frame, person_keypoints, person_box, person_id):
@@ -137,7 +146,13 @@ class YOLOCameraApp:
     def detect_objects(self, frame):
         detected = []
         # Rimuovi i risultati per poter usare solo i detection per il disegno.
-        results_det = self.model_knife(frame, verbose=False)
+        results_det = self.model_knife(
+            frame, 
+            verbose=False, 
+            imgsz=320,  # Ridimensiona l'input del modello
+            half=True,  # Usa precisione FP16 (solo GPU)
+            device=0    # Forza l'uso della GPU (es. 'cuda' o 0)
+        )
 
         # Crea una lista di oggetti rilevati con tutte le info necessarie
         for result in results_det:
@@ -175,7 +190,35 @@ class YOLOCameraApp:
 
         detected_persons = set()
         results_pose = self.model_pose.track(
-            frame, tracker="botsort.yaml", persist=True, verbose=False)
+                    frame, 
+                    tracker="botsort.yaml", 
+                    persist=True, 
+                    verbose=False,
+                    imgsz=320,  # Ridimensiona l'input del modello
+                    half=True,  # Usa precisione FP16 (solo GPU)
+                    device=0    # Forza l'uso della GPU (es. 'cuda' o 0)
+                )
+        
+        # Otteniamo gli ID attualmente tracciati nel frame
+        current_ids_in_frame = set()
+        if results_pose:
+            for result in results_pose:
+                if result.boxes is not None and result.boxes.id is not None:
+                    current_ids_in_frame.update(result.boxes.id.cpu().numpy().astype(int).tolist())
+
+        # Rimuovi le sequenze delle persone non più tracciate
+        ids_to_remove = set(self.person_sequences.keys()) - current_ids_in_frame
+        for old_id in ids_to_remove:
+            # print(f"Rimuovo la sequenza per l'ID {old_id} non più tracciato.")
+            del self.person_sequences[old_id]
+        
+        # Rimuovi le predizioni delle persone non più tracciate
+        ids_to_remove_pred = set(self.person_last_prediction.keys()) - current_ids_in_frame
+        for old_id in ids_to_remove_pred:
+            if old_id in self.person_last_prediction:
+                del self.person_last_prediction[old_id]
+            if old_id in self.person_frame_counter:
+                del self.person_frame_counter[old_id]
 
         for result in results_pose:
             if result.keypoints is not None and result.boxes is not None and result.boxes.id is not None:
@@ -220,15 +263,13 @@ class YOLOCameraApp:
                                 break
 
                         # Predizione della violenza basata sui keypoints della persona
-                        violence_score = self.predict_violence(person_kpts_normalized, person_kpts_conf)
+                        violence_score = self.predict_violence(person_kpts_normalized, person_kpts_conf, person_id)
 
                         box_color = self.COLOR_NON_VIOLENT  # Default non-violento
                         is_violent = False
                         detection_entry = ""
-
                         # Se la predizione ha restituito un punteggio valido
                         if violence_score is not None:
-
                             is_violent = violence_score > self.VIOLENCE_THRESHOLD
                             
                             if is_violent:
@@ -297,7 +338,8 @@ class YOLOCameraApp:
         return relative_keypoints
     
     # Predizione violenza
-    def predict_violence(self, person_keypoints_normalized, person_kpts_conf):
+    def predict_violence(self, person_keypoints_normalized, person_kpts_conf, person_id):
+        print(f"Predicting violence for person ID: {person_id} frame : {len(self.person_sequences[person_id]) if person_id in self.person_sequences else 'new person'}")
 
         keypoints_with_conf = np.hstack([person_keypoints_normalized, person_kpts_conf[:, None]])
             
@@ -305,23 +347,51 @@ class YOLOCameraApp:
 
         flattened = relative_kpts_with_conf.flatten()
 
-        # Aggiungi alla sequenza
-        self.sequence.append(flattened)
+        # Ottieni o crea la sequenza specifica per QUESTA persona
+        if person_id not in self.person_sequences:
+            self.person_sequences[person_id] = deque(maxlen=150)
+            # Inizia da 0 per predire subito al primo frame utile
+            self.person_frame_counter[person_id] = 0 
+            # Nessuna predizione ancora
+            self.person_last_prediction[person_id] = None 
+        
+        current_sequence = self.person_sequences[person_id]
+        current_sequence.append(flattened)
 
-        # Mantieni sempre 150 frame al massimo
-        if len(self.sequence) > 150:
-            self.sequence.pop(0)
+        # Se la sequenza non è piena, non possiamo predire nulla
+        if len(current_sequence) < 150:
+            return None 
+        
+        # Controlla se è il momento di predire (contatore a 0)
+        if self.person_frame_counter[person_id] > 0:
+            # Se non è il momento, decrementa il contatore
+            self.person_frame_counter[person_id] -= 1
+            # E restituisci l'ULTIMA predizione nota
+            return self.person_last_prediction[person_id] 
+        
+        # Se il contatore è a 0, ESEGUI la predizione
+        # e resetta il contatore
+        self.person_frame_counter[person_id] = self.PREDICTION_SKIP_FRAMES 
 
-        # Quando abbiamo 150 frame, predici
-        if len(self.sequence) == 150:
-            data = np.array(self.sequence, dtype=np.float32).reshape(1, 150, -1)
-            pred = self.model.predict(data, verbose=0)[0][0]
-            return float(pred)
+        data = np.array(current_sequence, dtype=np.float32).reshape(1, 150, -1)
+        pred = self.model.predict(data, verbose=0)[0][0]
+        
+        # Salva questa nuova predizione come "ultima predizione nota"
+        self.person_last_prediction[person_id] = float(pred) 
+        
+        return float(pred)
 
-        return None
 
     # --- Aggiornamento frame ---
     def update_frame(self):
+        current_time = time.time()
+        if self.prev_time > 0:
+            elapsed_time = current_time - self.prev_time
+            # Evita divisione per zero se il tempo è troppo piccolo
+            if elapsed_time > 0:
+                self.fps = 1.0 / elapsed_time
+        self.prev_time = current_time
+
         success, frame = self.cap.read()
         if not success:
             self.root.after(10, self.update_frame)
@@ -332,6 +402,11 @@ class YOLOCameraApp:
         # Pose: Ritorna il frame con i disegni
         frame_drawn, detected_persons = self.detect_pose(
             frame, detected_items)  # Passa il frame originale
+        
+        fps_text = f"FPS: {self.fps:.1f}"
+        # Posizionalo in alto a sinistra (coordinate 10, 30)
+        cv2.putText(frame_drawn, fps_text, (10, 30), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), 2, cv2.LINE_AA) # Aggiungi il testo FPS al frame
 
         # Unisci oggetti e persone
         object_names = {
@@ -351,7 +426,7 @@ class YOLOCameraApp:
         self.lmain.configure(image=imgtk)
 
         # Richiamo ricorsivo
-        self.root.after(10, self.update_frame)
+        self.root.after(50, self.update_frame)
 
     # --- Avvio app ---
     def run(self):

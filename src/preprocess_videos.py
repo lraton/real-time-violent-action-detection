@@ -9,10 +9,10 @@ model_pose = YOLO("models/pose/weights/best.pt")
 
 # Cartelle dei video
 video_dirs = [
-    ##'../video-dataset/violent/cam1/',
-    ##'../video-dataset/violent/cam2/',
-    '../video-dataset/non-violent/cam1/',
-    '../video-dataset/non-violent/cam2/'
+    '../video-dataset/violent/cam1/',
+    '../video-dataset/violent/cam2/',
+    ##'../video-dataset/non-violent/cam1/',
+    ##'../video-dataset/non-violent/cam2/'
 ]
 
 # INDICI DEI KEYPOINT NEL FORMATO COCO (17 KEYPOINTS)

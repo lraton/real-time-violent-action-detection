@@ -1,3 +1,5 @@
+import os
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0' # Disabilita ottimizzazioni OneDNN per evitare problemi di compatibilità
 import numpy as np
 import glob
 from tensorflow.keras.models import Sequential
@@ -5,13 +7,15 @@ from tensorflow.keras.layers import LSTM, Dense, Dropout, Masking
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
-import os
+
+
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
 DATA_PATH = "models/violentvideo/"   # cartella dove hai salvato i file .npz
-MODEL_PATH = "models/lstm_violence_detector.h5"
+MODEL_PATH = "models/lstm_violence_detector.keras"
 MAX_FRAMES = 150
 BATCH_SIZE = 8
-EPOCHS = 30
+EPOCHS = 100
 
 def main():
     X, y = [], []  # liste per dati e etichette 
@@ -59,7 +63,7 @@ def create_and_train_model(X, y):
 
     # Callbacks
     checkpoint = ModelCheckpoint(MODEL_PATH, save_best_only=True, monitor='val_loss', mode='min', verbose=1)
-    earlystop = EarlyStopping(monitor='val_loss', patience=8, min_delta=0.001,restore_best_weights=True)
+    earlystop = EarlyStopping(monitor='val_loss', patience=8, min_delta=0.00,restore_best_weights=True)
 
     print("Avvio dell'addestramento...")
     model.fit(
