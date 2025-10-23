@@ -8,9 +8,6 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 
-
-os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
-
 DATA_PATH = "models/violentvideo/"   # cartella dove hai salvato i file .npz
 MODEL_PATH = "models/lstm_violence_detector.keras"
 MAX_FRAMES = 150
