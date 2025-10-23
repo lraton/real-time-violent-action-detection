@@ -341,11 +341,11 @@ class YOLOCameraApp:
     def predict_violence(self, person_keypoints_normalized, person_kpts_conf, person_id):
         print(f"Predicting violence for person ID: {person_id} frame : {len(self.person_sequences[person_id]) if person_id in self.person_sequences else 'new person'}")
 
-        keypoints_with_conf = np.hstack([person_keypoints_normalized, person_kpts_conf[:, None]])
+        relative_kpts_xy = self.normalize_keypoints_relative_to_torso(person_keypoints_normalized)
             
-        relative_kpts_with_conf = self.normalize_keypoints_relative_to_torso(keypoints_with_conf)
+        keypoints_with_conf = np.hstack([relative_kpts_xy, person_kpts_conf[:, None]])  # Aggiungi la conf come terza colonna
 
-        flattened = relative_kpts_with_conf.flatten()
+        flattened = keypoints_with_conf.flatten()
 
         # Ottieni o crea la sequenza specifica per QUESTA persona
         if person_id not in self.person_sequences:
