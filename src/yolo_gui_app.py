@@ -47,7 +47,7 @@ class YOLOCameraApp:
     PERSON_PREFIX = "Persona"
     STATUS_TEXT = "Non-Violenta"
 
-    def __init__(self, knife_model_path="models/knife/runs/detect/train3/weights/best.pt", pose_model_path="models/yolo8n-pose.pt"):
+    def __init__(self, knife_model_path="models/knife/weights/best.pt", pose_model_path="models/yolo11n-pose.pt"):
         self.model_knife = YOLO(knife_model_path)
         self.model_pose = YOLO(pose_model_path)
         
