@@ -27,6 +27,8 @@ def main():
             default_label = 0
         else:
             default_label = 1
+        
+        print(f"{default_label}")
 
         if 'cam1' in path_to_video:
             cam_label = 'cam1'
@@ -89,7 +91,7 @@ def main():
 
                     # salva i keypoint di questa persona
                     temp_dict = {pid: frames}
-                    save_keypoints_to_dataset(temp_dict, filename, label, cam_label)
+                    save_keypoints_to_dataset(temp_dict, filename, label, cam_label, default_label)
             else:
                 # Salva i keypoint di tutte le persone con label 0
                 save_keypoints_to_dataset(people_data, filename, default_label, cam_label)
@@ -114,7 +116,7 @@ def normalize_keypoints_relative_to_torso(i, keypoints_normalized):
     return relative_keypoints
 
 #   Salva i keypoint normalizzati nel dataset
-def save_keypoints_to_dataset(people_data, filename, label, cam_label):
+def save_keypoints_to_dataset(people_data, filename, label, cam_label, default_label = 0):
     save_path='models/violentvideo/'
     os.makedirs(save_path, exist_ok=True)
 
@@ -125,7 +127,7 @@ def save_keypoints_to_dataset(people_data, filename, label, cam_label):
         person_array = np.array(frames, dtype=np.float32)  # (num_frames, 17, 3)
         video_name = os.path.splitext(os.path.basename(filename))[0]
 
-        if label == 1:
+        if default_label == 1:
             np.savez(f"{save_path}violent_video{video_name}_{cam_label}_person{pid}", data=person_array, label=label)
             print(f"Salvo video violento: {video_name}, {cam_label}, persona ID: {pid}, frames: {person_array.shape[0]}")
         else:
