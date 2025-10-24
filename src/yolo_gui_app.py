@@ -83,7 +83,7 @@ class YOLOCameraApp:
         self.object_list.pack(fill=tk.Y, expand=True)
 
         # Webcam
-        self.cap = cv2.VideoCapture(camera_index)
+        self.cap = cv2.VideoCapture("../video-dataset/non-violent/cam1/1.mp4")
         self.cap.set(3, 640)
         self.cap.set(4, 480)
 
@@ -151,7 +151,8 @@ class YOLOCameraApp:
             verbose=False, 
             imgsz=320,  # Ridimensiona l'input del modello
             half=True,  # Usa precisione FP16 (solo GPU)
-            device=0    # Forza l'uso della GPU (es. 'cuda' o 0)
+            device=0,    # Forza l'uso della GPU (es. 'cuda' o 0)
+            conf=0.55
         )
 
         # Crea una lista di oggetti rilevati con tutte le info necessarie
@@ -170,21 +171,20 @@ class YOLOCameraApp:
                         "box": (x1, y1, x2, y2),
                         "cls": cls  # Aggiungiamo cls per i colori nel disegno successivo
                     })
+                    
+                    colour = get_colours(cls)
+                    # Disegna la box dell'oggetto sul frame per la visualizzazione
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), colour, 2)
+                    cv2.putText(frame, f"{class_name} {conf:.2f}",
+                                (x1, max(y1 - 10, 20)), cv2.FONT_HERSHEY_SIMPLEX,
+                                0.6, colour, 2)
         return detected  # Restituisce solo i dati, non il frame modificato
 
     # --- Pose ---
     def detect_pose(self, frame, detected_items):
+        # Disegna gli oggetti rilevati prima
         for obj in detected_items:
             x1, y1, x2, y2 = obj["box"]
-            class_name = obj["class"]
-            conf = obj["conf"]
-            cls = obj["cls"]
-
-            colour = get_colours(cls)
-            cv2.rectangle(frame, (x1, y1), (x2, y2), colour, 2)
-            cv2.putText(frame, f"{class_name} {conf:.2f}",
-                        (x1, max(y1 - 10, 20)), cv2.FONT_HERSHEY_SIMPLEX,
-                        0.6, colour, 2)
 
         clean_frame_for_save = frame.copy()
 
@@ -196,7 +196,8 @@ class YOLOCameraApp:
                     verbose=False,
                     imgsz=320,  # Ridimensiona l'input del modello
                     half=True,  # Usa precisione FP16 (solo GPU)
-                    device=0    # Forza l'uso della GPU (es. 'cuda' o 0)
+                    device=0,    # Forza l'uso della GPU (es. 'cuda' o 0)
+                    conf=0.6
                 )
         
         # Otteniamo gli ID attualmente tracciati nel frame
@@ -221,6 +222,7 @@ class YOLOCameraApp:
                 del self.person_frame_counter[old_id]
 
         for result in results_pose:
+            frame=result.plot()  # Disegna i keypoints sul frame
             if result.keypoints is not None and result.boxes is not None and result.boxes.id is not None:
                 kpts_list = result.keypoints.xy
                 kpts_normalized = result.keypoints.xyn.cpu().numpy() # PER LA PREDIZIONE (come nel training)
@@ -243,8 +245,8 @@ class YOLOCameraApp:
                         x1, y1, x2, y2 = map(int, result.boxes.xyxy[idx])
                         person_box = (x1, y1, x2, y2)
 
-                        inside = False
-                        for obj in detected_items:
+                        inside = False 
+                        for obj in detected_items: # Controlla se la persona è dentro un oggetto rilevato (es. coltello)
                             ox1, oy1, ox2, oy2 = obj["box"]
                             # Calcola le coordinate dell'intersezione
                             overlap_x1 = max(x1, ox1)
@@ -260,6 +262,7 @@ class YOLOCameraApp:
                             intersection_area = overlap_w * overlap_h
                             if intersection_area > 0:
                                 inside = True
+                                
                                 break
 
                         # Predizione della violenza basata sui keypoints della persona
@@ -300,6 +303,8 @@ class YOLOCameraApp:
                         # Aggiungi alla lista degli oggetti rilevati
                         detected_persons.add(detection_entry)
 
+                        
+
                         # Etichetta finale da visualizzare
                         if violence_score is None:
                             final_label = f"{self.PERSON_PREFIX} {person_id} | {self.STATUS_TEXT} (N/A)"
@@ -308,7 +313,8 @@ class YOLOCameraApp:
                         text_position = (x1, max(y1 - 10, 20))
                         
                         cv2.putText(frame, final_label, text_position, self.FONT, self.FONT_SCALE, box_color, self.FONT_THICKNESS)
-                        # Disegna la box della persona sul frame per la visualizzazione
+                        '''
+                        # Disegna il bounding box della persona
                         cv2.rectangle(frame, (x1, y1), (x2, y2), box_color, 2)
 
                         # Disegna punti e scheletro (Parte finale del disegno)
@@ -318,8 +324,8 @@ class YOLOCameraApp:
                             x1_k, y1_k = person[i]
                             x2_k, y2_k = person[j]
                             cv2.line(frame, (int(x1_k), int(y1_k)),
-                                     (int(x2_k), int(y2_k)), box_color, 2)
-
+                                     (int(x2_k), int(y2_k)), box_color, 2)'''            
+                        
         return frame, detected_persons
     
     # Normalizza i keypoints rispetto al torso
