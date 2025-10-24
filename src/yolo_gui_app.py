@@ -10,7 +10,7 @@ from tensorflow.keras.models import load_model
 from collections import deque
 import numpy as np
 
-camera_index = 1  # Modifica questo indice se necessario
+camera_index = 0  # Modifica questo indice se necessario
 
 # --- Funzione colori ---
 def get_colours(cls_num: int) -> tuple[int, int, int]:
@@ -77,7 +77,7 @@ class YOLOCameraApp:
         self.object_list.pack(fill=tk.Y, expand=True)
 
         # Webcam
-        self.cap = cv2.VideoCapture("../video-dataset/violent/cam1/1.mp4")
+        self.cap = cv2.VideoCapture(camera_index)
         self.cap.set(3, 640)
         self.cap.set(4, 480)
 
