@@ -1,2 +1,4 @@
 datasets
 /src/models/knife/knife-dataset
+src/models/pose/weights/yolo11x-pose.pt
+src/test.py
