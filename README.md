@@ -28,12 +28,18 @@ This project implements a real-time detection system to identify potentially dan
 
 ## Start program
 
+### Windows ha bisogno di wsl
+
 ```
+wsl -d Ubutnu
+
+source ~/my_venv/bin/activate
+
 pip install -r requirements.txt
-```
-```
+
 python yolo_run.py
 ```
+
 ---
 
 ## 📝 Workflow Steps
