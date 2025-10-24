@@ -53,12 +53,6 @@ class YOLOCameraApp:
         
         self.saved_faces_ids = set()  # Per evitare salvataggi duplicati di volti
         self.person_sequences = {} # Sequenze di keypoints per ogni persona ID
-        # Dizionario per l'ultima predizione di violenza per ogni ID
-        self.person_last_prediction = {} 
-        # Dizionario per il contatore di frame per ogni ID
-        self.person_frame_counter = {}   
-        # Esegui l'LSTM solo 1 volta ogni N frame (prova con 3 o 5)
-        self.PREDICTION_SKIP_FRAMES = 3
 
         self.prev_time = 0  # Tempo del frame precedente
         self.fps = 0        # Valore FPS calcolato
@@ -83,7 +77,7 @@ class YOLOCameraApp:
         self.object_list.pack(fill=tk.Y, expand=True)
 
         # Webcam
-        self.cap = cv2.VideoCapture("../video-dataset/non-violent/cam1/1.mp4")
+        self.cap = cv2.VideoCapture("../video-dataset/violent/cam1/1.mp4")
         self.cap.set(3, 640)
         self.cap.set(4, 480)
 
@@ -152,7 +146,7 @@ class YOLOCameraApp:
             imgsz=320,  # Ridimensiona l'input del modello
             half=True,  # Usa precisione FP16 (solo GPU)
             device=0,    # Forza l'uso della GPU (es. 'cuda' o 0)
-            conf=0.55
+            conf=0.6
         )
 
         # Crea una lista di oggetti rilevati con tutte le info necessarie
@@ -212,14 +206,6 @@ class YOLOCameraApp:
         for old_id in ids_to_remove:
             # print(f"Rimuovo la sequenza per l'ID {old_id} non più tracciato.")
             del self.person_sequences[old_id]
-        
-        # Rimuovi le predizioni delle persone non più tracciate
-        ids_to_remove_pred = set(self.person_last_prediction.keys()) - current_ids_in_frame
-        for old_id in ids_to_remove_pred:
-            if old_id in self.person_last_prediction:
-                del self.person_last_prediction[old_id]
-            if old_id in self.person_frame_counter:
-                del self.person_frame_counter[old_id]
 
         for result in results_pose:
             frame=result.plot()  # Disegna i keypoints sul frame
@@ -348,43 +334,27 @@ class YOLOCameraApp:
         print(f"Predicting violence for person ID: {person_id} frame : {len(self.person_sequences[person_id]) if person_id in self.person_sequences else 'new person'}")
 
         relative_kpts_xy = self.normalize_keypoints_relative_to_torso(person_keypoints_normalized)
-            
-        keypoints_with_conf = np.hstack([relative_kpts_xy, person_kpts_conf[:, None]])  # Aggiungi la conf come terza colonna
+
+        keypoints_with_conf = np.hstack([relative_kpts_xy, person_kpts_conf[:, None]]) # Aggiungi la conf come terza colonna
 
         flattened = keypoints_with_conf.flatten()
 
         # Ottieni o crea la sequenza specifica per QUESTA persona
         if person_id not in self.person_sequences:
             self.person_sequences[person_id] = deque(maxlen=150)
-            # Inizia da 0 per predire subito al primo frame utile
-            self.person_frame_counter[person_id] = 0 
-            # Nessuna predizione ancora
-            self.person_last_prediction[person_id] = None 
-        
+
         current_sequence = self.person_sequences[person_id]
         current_sequence.append(flattened)
 
         # Se la sequenza non è piena, non possiamo predire nulla
         if len(current_sequence) < 150:
             return None 
-        
-        # Controlla se è il momento di predire (contatore a 0)
-        if self.person_frame_counter[person_id] > 0:
-            # Se non è il momento, decrementa il contatore
-            self.person_frame_counter[person_id] -= 1
-            # E restituisci l'ULTIMA predizione nota
-            return self.person_last_prediction[person_id] 
-        
-        # Se il contatore è a 0, ESEGUI la predizione
-        # e resetta il contatore
-        self.person_frame_counter[person_id] = self.PREDICTION_SKIP_FRAMES 
 
+        # Ora esegue la predizione AD OGNI FRAME (purché la sequenza sia piena)
         data = np.array(current_sequence, dtype=np.float32).reshape(1, 150, -1)
         pred = self.model.predict(data, verbose=0)[0][0]
-        
-        # Salva questa nuova predizione come "ultima predizione nota"
-        self.person_last_prediction[person_id] = float(pred) 
-        
+
+        # Res
         return float(pred)
 
 
