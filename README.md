@@ -28,7 +28,18 @@ This project implements a real-time detection system to identify potentially dan
 
 ## Start program
 
-### Windows ha bisogno di wsl
+### Windows
+
+#### Shell senza GPU per lstm
+
+```
+pip install -r requirements.txt
+
+python yolo_run.py
+```
+
+
+#### WSL per gpu con TensorFlow (lstm)
 
 ```
 wsl -d Ubutnu
@@ -40,6 +51,12 @@ pip install -r requirements.txt
 python yolo_run.py
 ```
 
+---
+
+# TODO
+- [] Modificare classe yoloapp
+  - [] Dividere in piu classi, predict e gui
+  - 
 ---
 
 ## 📝 Workflow Steps
