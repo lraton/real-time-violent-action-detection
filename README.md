@@ -54,9 +54,9 @@ python yolo_run.py
 ---
 
 # TODO
-- [] Modificare classe yoloapp
-  - [] Dividere in piu classi, predict e gui
-  - 
+- [x] Modificare classe yoloapp
+  - [x] Dividere in piu classi, predict e gui
+- [ ] Ottimizzare finestra, troppo lag dato da tkinter
 ---
 
 ## 📝 Workflow Steps

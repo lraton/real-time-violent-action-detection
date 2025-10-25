@@ -38,23 +38,33 @@ class ViolenceDetectionSystem:
         """
         Orchestra l'intero processo di detection e disegno per un singolo frame.
         """
+
+        t_start = time.time()
         # Salva una copia pulita per l'estrazione dei volti
         clean_frame_for_save = frame.copy()
 
         # Rileva oggetti (coltelli)
+        t_obj_start = time.time()
         detected_items = self.detect_objects(frame)
+        t_obj = (time.time() - t_obj_start) * 1000  # in ms
 
         # Prende le pose e traccia le persone
+        t_pose_start = time.time()
         results_pose = self.model_pose.track(frame, tracker="botsort.yaml", persist=True, verbose=False, imgsz=320, half=True, device=0, conf=0.6)
+        t_pose = (time.time() - t_pose_start) * 1000  # in ms
 
         # Processa i risultati delle pose
+        t_logic_start = time.time()
         person_data, person_strings_for_list = self.detect_pose(results_pose, detected_items, clean_frame_for_save)
+        t_logic = (time.time() - t_logic_start) * 1000  # in ms
 
         # Disegna tutto sul frame
+        t_draw_start = time.time()
         if results_pose and results_pose[0]:
             frame_drawn = results_pose[0].plot()  # Disegna le pose
         else:
             frame_drawn = frame  # Nessuna posa, usa il frame originale
+        t_draw = (time.time() - t_draw_start) * 1000  # in ms
 
         # Disegna oggetti e etichette persone
         frame_drawn = self.draw_detections(frame_drawn, detected_items, person_data)
@@ -62,6 +72,18 @@ class ViolenceDetectionSystem:
         # Prepara la lista di stringhe per la GUI
         object_strings = {f"{obj['class']} {obj['conf']:.2f}" for obj in detected_items}
         all_detected_strings = object_strings.union(person_strings_for_list)
+
+        t_total = (time.time() - t_start) * 1000
+
+        # --- Stampa i risultati nel terminale ---
+        print(f"--- ANALISI FRAME (ms) ---")
+        print(f"  1. Knife Detect : {t_obj:.1f} ms")
+        print(f"  2. Pose Detect  : {t_pose:.1f} ms")
+        print(f"  3. Logic/LSTM   : {t_logic:.1f} ms")
+        print(f"  4. Drawing      : {t_draw:.1f} ms")
+        print(f"  --------------------------")
+        print(f"  TOTALE FRAME  : {t_total:.1f} ms  (Target: {1000/t_total:.1f} FPS)")
+        print("\n")  # Aggiungi uno spazio
 
         return frame_drawn, all_detected_strings
 

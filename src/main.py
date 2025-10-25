@@ -9,7 +9,7 @@ from violence_detection_system import ViolenceDetectionSystem
 def main():
     prev_time = 0  # Tempo del frame precedente
     fps = 0  # Valore FPS calcolato
-    camera_index = 0  # Modifica questo indice se necessario (spesso 0 o 1)
+    camera_index = 1  # Modifica questo indice se necessario (spesso 0 o 1)
 
     # Inizializza la classe che gestisce YOLO
     app = ViolenceDetectionSystem(knife_model_path="models/knife/weights/best.pt", pose_model_path="models/yolo11n-pose.pt")
@@ -97,9 +97,8 @@ def update_frame(root, lmain, cap, object_list, app, prev_time, fps):
     lmain.imgtk = imgtk
     lmain.configure(image=imgtk)
 
-    # --- Richiamo ricorsivo ---
-    # CORREZIONE: Passa tutti gli argomenti necessari alla prossima chiamata
-    root.after(10, update_frame, root, lmain, cap, object_list, app, prev_time, fps)
+    # Richiama questa funzione dopo 10 ms
+    root.after(1, update_frame, root, lmain, cap, object_list, app, prev_time, fps)
 
 
 if __name__ == '__main__':
