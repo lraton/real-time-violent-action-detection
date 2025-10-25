@@ -11,15 +11,16 @@ import numpy as np
 
 camera_index = 0  # Modifica questo indice se necessario
 
+
 class YOLOCameraApp:
     # Carica il modello LSTM per la rilevazione della violenza
     model = load_model("models/lstm_violence_detector.keras")
 
     # Costanti per rilevamento violenza
-    VIOLENCE_THRESHOLD = 0.7         # Soglia per classificare come violento
-    COLOR_VIOLENT = (0, 0, 255)      # Rosso (BGR) per comportamento violento
+    VIOLENCE_THRESHOLD = 0.7  # Soglia per classificare come violento
+    COLOR_VIOLENT = (0, 0, 255)  # Rosso (BGR) per comportamento violento
     COLOR_NON_VIOLENT = (0, 255, 0)  # Verde (BGR) per comportamento non-violento
-    COLOR_KNIFE = (255, 0, 0)        # Blu (BGR) per coltello
+    COLOR_KNIFE = (255, 0, 0)  # Blu (BGR) per coltello
     FONT = cv2.FONT_HERSHEY_SIMPLEX
     FONT_SCALE = 0.6
     FONT_THICKNESS = 2
@@ -27,22 +28,17 @@ class YOLOCameraApp:
     STATUS_TEXT = "Non-Violenta"
 
     # Scheletro per i keypoints (coppie di indici da connettere)
-    SKELETON = [
-        (5, 6), (5, 7), (7, 9),
-        (6, 8), (8, 10), (11, 12),
-        (5, 11), (6, 12), (11, 13),
-        (13, 15), (12, 14), (14, 16)
-    ]
+    SKELETON = [(5, 6), (5, 7), (7, 9), (6, 8), (8, 10), (11, 12), (5, 11), (6, 12), (11, 13), (13, 15), (12, 14), (14, 16)]
 
     def __init__(self, knife_model_path="models/knife/weights/best.pt", pose_model_path="models/yolo11n-pose.pt"):
         self.model_knife = YOLO(knife_model_path)
         self.model_pose = YOLO(pose_model_path)
-        
+
         self.saved_faces_ids = set()  # Per evitare salvataggi duplicati di volti
-        self.person_sequences = {} # Sequenze di keypoints per ogni persona ID
+        self.person_sequences = {}  # Sequenze di keypoints per ogni persona ID
 
         self.prev_time = 0  # Tempo del frame precedente
-        self.fps = 0        # Valore FPS calcolato
+        self.fps = 0  # Valore FPS calcolato
 
         # Tkinter GUI
         self.root = tk.Tk()
@@ -57,10 +53,8 @@ class YOLOCameraApp:
         # Frame oggetti rilevati
         self.frame_right = tk.Frame(self.root)
         self.frame_right.pack(side=tk.RIGHT, fill=tk.Y)
-        ttk.Label(self.frame_right, text="Oggetti rilevati:",
-                  font=("Arial", 14)).pack()
-        self.object_list = tk.Listbox(
-            self.frame_right, width=30, font=("Arial", 12))
+        ttk.Label(self.frame_right, text="Oggetti rilevati:", font=("Arial", 14)).pack()
+        self.object_list = tk.Listbox(self.frame_right, width=30, font=("Arial", 12))
         self.object_list.pack(fill=tk.Y, expand=True)
 
         # Webcam
@@ -116,11 +110,9 @@ class YOLOCameraApp:
         os.makedirs("../suspect/", exist_ok=True)
         face_image = frame[y1:y2, x1:x2]
         if face_image is not None and face_image.size > 0:
-            face_filename = f"../suspect/face_susp_{person_id}_"+time.strftime(
-                '%b-%d-%Y_%H%M')+".jpg"
+            face_filename = f"../suspect/face_susp_{person_id}_" + time.strftime('%b-%d-%Y_%H%M') + ".jpg"
             cv2.imwrite(face_filename, face_image)
-            print(
-                f"Volto sospetto salvato: {face_filename}")
+            print(f"Volto sospetto salvato: {face_filename}")
             self.saved_faces_ids.add(person_id)
 
     # --- Detection oggetti ---
@@ -128,12 +120,12 @@ class YOLOCameraApp:
         detected = []
         # Rimuovi i risultati per poter usare solo i detection per il disegno.
         results_det = self.model_knife(
-            frame, 
-            verbose=False, 
+            frame,
+            verbose=False,
             imgsz=320,  # Ridimensiona l'input del modello
             half=True,  # Usa precisione FP16 (solo GPU)
-            device=0,    # Forza l'uso della GPU (es. 'cuda' o 0)
-            conf=0.69 # Soglia di confidenza
+            device=0,  # Forza l'uso della GPU (es. 'cuda' o 0)
+            conf=0.69  # Soglia di confidenza
         )
 
         # Crea una lista di oggetti rilevati con tutte le info necessarie
@@ -152,12 +144,10 @@ class YOLOCameraApp:
                         "box": (x1, y1, x2, y2),
                         "cls": cls  # Aggiungiamo cls per i colori nel disegno successivo
                     })
-                    
+
                     # Disegna la box dell'oggetto sul frame per la visualizzazione
                     cv2.rectangle(frame, (x1, y1), (x2, y2), self.COLOR_KNIFE, 2)
-                    cv2.putText(frame, f"{class_name} {conf:.2f}",
-                                (x1, max(y1 - 10, 20)), self.FONT,
-                                self.FONT_SCALE, self.COLOR_KNIFE, self.FONT_THICKNESS)
+                    cv2.putText(frame, f"{class_name} {conf:.2f}", (x1, max(y1 - 10, 20)), self.FONT, self.FONT_SCALE, self.COLOR_KNIFE, self.FONT_THICKNESS)
         return detected  # Restituisce solo i dati, non il frame modificato
 
     # --- Pose ---
@@ -170,16 +160,16 @@ class YOLOCameraApp:
 
         detected_persons = set()
         results_pose = self.model_pose.track(
-                    frame, 
-                    tracker="botsort.yaml", 
-                    persist=True, 
-                    verbose=False,
-                    imgsz=320,  # Ridimensiona l'input del modello
-                    half=True,  # Usa precisione FP16 (solo GPU)
-                    device=0,    # Forza l'uso della GPU (es. 'cuda' o 0)
-                    conf=0.69 # Soglia di confidenza
-                )
-        
+            frame,
+            tracker="botsort.yaml",
+            persist=True,
+            verbose=False,
+            imgsz=320,  # Ridimensiona l'input del modello
+            half=True,  # Usa precisione FP16 (solo GPU)
+            device=0,  # Forza l'uso della GPU (es. 'cuda' o 0)
+            conf=0.69  # Soglia di confidenza
+        )
+
         # Otteniamo gli ID attualmente tracciati nel frame
         current_ids_in_frame = set()
         if results_pose:
@@ -194,12 +184,12 @@ class YOLOCameraApp:
             del self.person_sequences[old_id]
 
         for result in results_pose:
-            frame=result.plot()  # Disegna i keypoints sul frame
+            frame = result.plot()  # Disegna i keypoints sul frame
             if result.keypoints is not None and result.boxes is not None and result.boxes.id is not None:
                 kpts_list = result.keypoints.xy
-                kpts_normalized = result.keypoints.xyn.cpu().numpy() # PER LA PREDIZIONE (come nel training)
-                ids = result.boxes.id.cpu().numpy().astype(int).tolist() # IDs delle persone
-                kpts_conf = result.keypoints.conf.cpu().numpy() # confidence dei keypoints
+                kpts_normalized = result.keypoints.xyn.cpu().numpy()  # PER LA PREDIZIONE (come nel training)
+                ids = result.boxes.id.cpu().numpy().astype(int).tolist()  # IDs delle persone
+                kpts_conf = result.keypoints.conf.cpu().numpy()  # confidence dei keypoints
 
                 # Sicurezza: a volte il numero di ID non corrisponde al numero di pose rilevate
                 if len(ids) != len(kpts_list):
@@ -210,15 +200,15 @@ class YOLOCameraApp:
                     # Prendiamo i dati specifici per questa persona
                     person_kpts_normalized = kpts_normalized[idx]
                     person_id = ids[idx]
-                    person_kpts_conf = kpts_conf[idx] # confidence dei keypoints
+                    person_kpts_conf = kpts_conf[idx]  # confidence dei keypoints
 
                     # Bounding box della persona
                     if result.boxes is not None and len(result.boxes.xyxy) > idx:
                         x1, y1, x2, y2 = map(int, result.boxes.xyxy[idx])
                         person_box = (x1, y1, x2, y2)
 
-                        inside = False 
-                        for obj in detected_items: # Controlla se la persona è dentro un oggetto rilevato (es. coltello)
+                        inside = False
+                        for obj in detected_items:  # Controlla se la persona è dentro un oggetto rilevato (es. coltello)
                             ox1, oy1, ox2, oy2 = obj["box"]
                             # Calcola le coordinate dell'intersezione
                             overlap_x1 = max(x1, ox1)
@@ -234,7 +224,7 @@ class YOLOCameraApp:
                             intersection_area = overlap_w * overlap_h
                             if intersection_area > 0:
                                 inside = True
-                                
+
                                 break
 
                         # Predizione della violenza basata sui keypoints della persona
@@ -246,7 +236,7 @@ class YOLOCameraApp:
                         # Se la predizione ha restituito un punteggio valido
                         if violence_score is not None:
                             is_violent = violence_score > self.VIOLENCE_THRESHOLD
-                            
+
                             if is_violent:
                                 self.STATUS_TEXT = "VIOLENTA"
                                 box_color = self.COLOR_VIOLENT
@@ -261,21 +251,17 @@ class YOLOCameraApp:
                         else:
                             self.PERSON_PREFIX = "Persona"
                             box_color = self.COLOR_NON_VIOLENT
-                        
+
                         if is_violent or person_id not in self.saved_faces_ids:
-                                # Salva il volto del sospetto, ma solo la prima volta che viene rilevato
-                                self.extract_suspicious_face(
-                                    clean_frame_for_save, person, person_box, person_id
-                                )
-                            
+                            # Salva il volto del sospetto, ma solo la prima volta che viene rilevato
+                            self.extract_suspicious_face(clean_frame_for_save, person, person_box, person_id)
+
                         if violence_score is None:
                             detection_entry = f"{self.PERSON_PREFIX} {person_id} | {self.STATUS_TEXT} (N/A)"
                         else:
-                            detection_entry = f"{self.PERSON_PREFIX} {person_id} | {self.STATUS_TEXT} ({violence_score:.2f})"                     
+                            detection_entry = f"{self.PERSON_PREFIX} {person_id} | {self.STATUS_TEXT} ({violence_score:.2f})"
                         # Aggiungi alla lista degli oggetti rilevati
                         detected_persons.add(detection_entry)
-
-                        
 
                         # Etichetta finale da visualizzare
                         if violence_score is None:
@@ -283,7 +269,7 @@ class YOLOCameraApp:
                         else:
                             final_label = f"{self.PERSON_PREFIX} {person_id} | {self.STATUS_TEXT} ({violence_score:.2f})"
                         text_position = (x1, max(y1 - 10, 20))
-                        
+
                         cv2.putText(frame, final_label, text_position, self.FONT, self.FONT_SCALE, box_color, self.FONT_THICKNESS)
                         '''
                         # Disegna il bounding box della persona
@@ -296,10 +282,10 @@ class YOLOCameraApp:
                             x1_k, y1_k = person[i]
                             x2_k, y2_k = person[j]
                             cv2.line(frame, (int(x1_k), int(y1_k)),
-                                     (int(x2_k), int(y2_k)), box_color, 2)'''            
-                        
+                                     (int(x2_k), int(y2_k)), box_color, 2)'''
+
         return frame, detected_persons
-    
+
     # --- Normalizza keypoints rispetto al torso ---
     def normalize_keypoints_relative_to_torso(self, person_keypoints_xyn):
 
@@ -314,14 +300,14 @@ class YOLOCameraApp:
         relative_keypoints = person_keypoints_xyn - center_point
 
         return relative_keypoints
-    
+
     # --- Predizione violenza ---
     def predict_violence(self, person_keypoints_normalized, person_kpts_conf, person_id):
         print(f"Predicting violence for person ID: {person_id} frame : {len(self.person_sequences[person_id]) if person_id in self.person_sequences else 'new person'}")
 
         relative_kpts_xy = self.normalize_keypoints_relative_to_torso(person_keypoints_normalized)
 
-        keypoints_with_conf = np.hstack([relative_kpts_xy, person_kpts_conf[:, None]]) # Aggiungi la conf come terza colonna
+        keypoints_with_conf = np.hstack([relative_kpts_xy, person_kpts_conf[:, None]])  # Aggiungi la conf come terza colonna
 
         flattened = keypoints_with_conf.flatten()
 
@@ -334,7 +320,7 @@ class YOLOCameraApp:
 
         # Se la sequenza non è piena, non possiamo predire nulla
         if len(current_sequence) < 150:
-            return None 
+            return None
 
         # Ora esegue la predizione AD OGNI FRAME (purché la sequenza sia piena)
         data = np.array(current_sequence, dtype=np.float32).reshape(1, 150, -1)
@@ -342,7 +328,6 @@ class YOLOCameraApp:
 
         # Res
         return float(pred)
-
 
     # --- Aggiornamento frame ---
     def update_frame(self):
@@ -362,17 +347,14 @@ class YOLOCameraApp:
         detected_items = self.detect_objects(frame)
 
         # Pose: Ritorna il frame con i disegni
-        frame_drawn, detected_persons = self.detect_pose(
-            frame, detected_items)  # Passa il frame originale
-        
+        frame_drawn, detected_persons = self.detect_pose(frame, detected_items)  # Passa il frame originale
+
         fps_text = f"FPS: {self.fps:.1f}"
         # Posizionalo in alto a sinistra (coordinate 10, 30)
-        cv2.putText(frame_drawn, fps_text, (10, 30), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), 2, cv2.LINE_AA) # Aggiungi il testo FPS al frame
+        cv2.putText(frame_drawn, fps_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), 2, cv2.LINE_AA)  # Aggiungi il testo FPS al frame
 
         # Unisci oggetti e persone
-        object_names = {
-            f"{obj['class']} {obj['conf']:.2f}" for obj in detected_items}
+        object_names = {f"{obj['class']} {obj['conf']:.2f}" for obj in detected_items}
         all_detected = object_names.union(detected_persons)
 
         # Aggiorna lista a destra

@@ -27,7 +27,7 @@ def main():
             default_label = 0
         else:
             default_label = 1
-        
+
         print(f"{default_label}")
 
         if 'cam1' in path_to_video:
@@ -43,15 +43,14 @@ def main():
 
             people_data = {}  # {person_id: [frames]} dati per ogni persona per video
 
-            # Avvia il tracking sul video 
+            # Avvia il tracking sul video
             results_generator = model_pose.track(
                 path_to_video + filename,
                 tracker="botsort.yaml",
                 #persist=True,
                 stream=True,
-                verbose=False
-            )
-            
+                verbose=False)
+
             # Processa ogni frame del video
             for frame_result in results_generator:
                 if frame_result.boxes.id is not None:
@@ -62,12 +61,11 @@ def main():
                     # Per ogni persona rilevata nel frame
                     for i, person_id in enumerate(person_ids):
                         relative_keypoints = normalize_keypoints_relative_to_torso(i, keypoints_normalized)  # Calcola i keypoint relativi
-                        
-                        
+
                         conf = frame_result.keypoints.conf[i].cpu().numpy()  # sposta su CPU e converti in NumPy
                         relative_keypoints_with_conf = np.hstack([relative_keypoints, conf[:, None]])  # Aggiungi la conf come terza colonna
 
-                        if person_id not in people_data:    # Inizializza la lista per la persona se non esiste
+                        if person_id not in people_data:  # Inizializza la lista per la persona se non esiste
                             people_data[person_id] = []
                         people_data[person_id].append(relative_keypoints_with_conf)  # Aggiungi i keypoint relativi alla lista della persona
 
@@ -97,7 +95,7 @@ def main():
                 save_keypoints_to_dataset(people_data, filename, default_label, cam_label)
 
             print(f"People data collected so far: {len(people_data)} individuals.")
-        
+
 
 # Funzione per normalizzare i keypoint rispetto al centro del torace
 def normalize_keypoints_relative_to_torso(i, keypoints_normalized):
@@ -115,9 +113,10 @@ def normalize_keypoints_relative_to_torso(i, keypoints_normalized):
 
     return relative_keypoints
 
+
 #   Salva i keypoint normalizzati nel dataset
-def save_keypoints_to_dataset(people_data, filename, label, cam_label, default_label = 0):
-    save_path='models/violentvideo/'
+def save_keypoints_to_dataset(people_data, filename, label, cam_label, default_label=0):
+    save_path = 'models/violentvideo/'
     os.makedirs(save_path, exist_ok=True)
 
     for pid, frames in people_data.items():
@@ -134,11 +133,11 @@ def save_keypoints_to_dataset(people_data, filename, label, cam_label, default_l
             np.savez(f"{save_path}nonviolent_video{video_name}_{cam_label}_person{pid}", data=person_array, label=label)
             print(f"Salvo video non-violento: {video_name}, {cam_label}, persona ID: {pid}, frames: {person_array.shape[0]}")
 
+
 # Funzione per visualizzare il video con i box e i keypoint annotati
 def video_display(frame_result):
     annotated_frame = frame_result.plot()
-    display_frame = cv2.resize(
-        annotated_frame, (1080, 720), interpolation=cv2.INTER_AREA)
+    display_frame = cv2.resize(annotated_frame, (1080, 720), interpolation=cv2.INTER_AREA)
     # Mostra il frame nella finestra ridimensionabile
     cv2.imshow("Video Annotation", display_frame)
 

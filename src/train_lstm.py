@@ -1,5 +1,5 @@
 import os
-os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0' # Disabilita ottimizzazioni OneDNN per evitare problemi di compatibilità
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'  # Disabilita ottimizzazioni OneDNN per evitare problemi di compatibilità
 import numpy as np
 import glob
 from tensorflow.keras.models import Sequential
@@ -8,20 +8,21 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 
-DATA_PATH = "models/violentvideo/"   # cartella dove hai salvato i file .npz
+DATA_PATH = "models/violentvideo/"  # cartella dove hai salvato i file .npz
 MODEL_PATH = "models/lstm_violence_detector.keras"
 MAX_FRAMES = 150
 BATCH_SIZE = 8
 EPOCHS = 100
 
+
 def main():
-    X, y = [], []  # liste per dati e etichette 
+    X, y = [], []  # liste per dati e etichette
 
     print("Caricamento file .npz...")
     for file in glob.glob(os.path.join(DATA_PATH, "*.npz")):
         data = np.load(file)
-        X.append(data["data"]) # sequenza di keypoints
-        y.append(int(data["label"])) # violent=1, non-violent=0
+        X.append(data["data"])  # sequenza di keypoints
+        y.append(int(data["label"]))  # violent=1, non-violent=0
         print(f"Caricato {os.path.basename(file)}")
 
     print(f"Totale sequenze: {len(X)}")
@@ -31,13 +32,15 @@ def main():
 
     print("\n Training completato!")
 
-def normalize_keypoints(X, y): # Normalizza le sequenze di keypoints
+
+def normalize_keypoints(X, y):  # Normalizza le sequenze di keypoints
     print("Normalizzazione delle sequenze...")
     X = pad_sequences(X, maxlen=MAX_FRAMES, dtype='float32', padding='post', truncating='post')
     X = X.reshape(X.shape[0], X.shape[1], -1)
     y = np.array(y, dtype=np.float32)
     print(f"Forma finale X: {X.shape}, y: {y.shape}")
     return X, y
+
 
 def create_and_train_model(X, y):
     # Suddivisione in training e validation set
@@ -60,17 +63,11 @@ def create_and_train_model(X, y):
 
     # Callbacks
     checkpoint = ModelCheckpoint(MODEL_PATH, save_best_only=True, monitor='val_loss', mode='min', verbose=1)
-    earlystop = EarlyStopping(monitor='val_loss', patience=8, min_delta=0.00,restore_best_weights=True)
+    earlystop = EarlyStopping(monitor='val_loss', patience=8, min_delta=0.00, restore_best_weights=True)
 
     print("Avvio dell'addestramento...")
-    model.fit(
-        X_train, y_train,
-        validation_data=(X_val, y_val),
-        epochs=EPOCHS,
-        batch_size=BATCH_SIZE,
-        callbacks=[checkpoint, earlystop],
-        verbose=1
-    )
+    model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=EPOCHS, batch_size=BATCH_SIZE, callbacks=[checkpoint, earlystop], verbose=1)
+
 
 if __name__ == '__main__':
     main()
