@@ -4,7 +4,6 @@ import time
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
-import random
 from ultralytics import YOLO
 from tensorflow.keras.models import load_model
 from collections import deque
@@ -12,40 +11,28 @@ import numpy as np
 
 camera_index = 0  # Modifica questo indice se necessario
 
-# --- Funzione colori ---
-def get_colours(cls_num: int) -> tuple[int, int, int]:
-    random.seed(cls_num)
-    while True:
-        r = random.randint(0, 255)
-        g = random.randint(0, 255)
-        b = random.randint(0, 255)
-        # Reject strong red tones
-        if not (r > 180 and g < 100 and b < 100):
-            return (r, g, b)
-
-
-# --- Skeleton della pose ---
-SKELETON = [
-    (5, 6), (5, 7), (7, 9),
-    (6, 8), (8, 10), (11, 12),
-    (5, 11), (6, 12), (11, 13),
-    (13, 15), (12, 14), (14, 16)
-]
-
-
 class YOLOCameraApp:
-
+    # Carica il modello LSTM per la rilevazione della violenza
     model = load_model("models/lstm_violence_detector.keras")
 
     # Costanti per rilevamento violenza
     VIOLENCE_THRESHOLD = 0.7         # Soglia per classificare come violento
     COLOR_VIOLENT = (0, 0, 255)      # Rosso (BGR) per comportamento violento
     COLOR_NON_VIOLENT = (0, 255, 0)  # Verde (BGR) per comportamento non-violento
+    COLOR_KNIFE = (255, 0, 0)        # Blu (BGR) per coltello
     FONT = cv2.FONT_HERSHEY_SIMPLEX
     FONT_SCALE = 0.6
     FONT_THICKNESS = 2
     PERSON_PREFIX = "Persona"
     STATUS_TEXT = "Non-Violenta"
+
+    # Scheletro per i keypoints (coppie di indici da connettere)
+    SKELETON = [
+        (5, 6), (5, 7), (7, 9),
+        (6, 8), (8, 10), (11, 12),
+        (5, 11), (6, 12), (11, 13),
+        (13, 15), (12, 14), (14, 16)
+    ]
 
     def __init__(self, knife_model_path="models/knife/weights/best.pt", pose_model_path="models/yolo11n-pose.pt"):
         self.model_knife = YOLO(knife_model_path)
@@ -146,7 +133,7 @@ class YOLOCameraApp:
             imgsz=320,  # Ridimensiona l'input del modello
             half=True,  # Usa precisione FP16 (solo GPU)
             device=0,    # Forza l'uso della GPU (es. 'cuda' o 0)
-            conf=0.6
+            conf=0.69 # Soglia di confidenza
         )
 
         # Crea una lista di oggetti rilevati con tutte le info necessarie
@@ -166,12 +153,11 @@ class YOLOCameraApp:
                         "cls": cls  # Aggiungiamo cls per i colori nel disegno successivo
                     })
                     
-                    colour = get_colours(cls)
                     # Disegna la box dell'oggetto sul frame per la visualizzazione
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), colour, 2)
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), self.COLOR_KNIFE, 2)
                     cv2.putText(frame, f"{class_name} {conf:.2f}",
-                                (x1, max(y1 - 10, 20)), cv2.FONT_HERSHEY_SIMPLEX,
-                                0.6, colour, 2)
+                                (x1, max(y1 - 10, 20)), self.FONT,
+                                self.FONT_SCALE, self.COLOR_KNIFE, self.FONT_THICKNESS)
         return detected  # Restituisce solo i dati, non il frame modificato
 
     # --- Pose ---
@@ -191,7 +177,7 @@ class YOLOCameraApp:
                     imgsz=320,  # Ridimensiona l'input del modello
                     half=True,  # Usa precisione FP16 (solo GPU)
                     device=0,    # Forza l'uso della GPU (es. 'cuda' o 0)
-                    conf=0.6
+                    conf=0.69 # Soglia di confidenza
                 )
         
         # Otteniamo gli ID attualmente tracciati nel frame
@@ -306,7 +292,7 @@ class YOLOCameraApp:
                         # Disegna punti e scheletro (Parte finale del disegno)
                         for x, y in person:
                             cv2.circle(frame, (int(x), int(y)), 4, box_color, -1)
-                        for (i, j) in SKELETON:
+                        for (i, j) in self.SKELETON:
                             x1_k, y1_k = person[i]
                             x2_k, y2_k = person[j]
                             cv2.line(frame, (int(x1_k), int(y1_k)),
@@ -314,7 +300,7 @@ class YOLOCameraApp:
                         
         return frame, detected_persons
     
-    # Normalizza i keypoints rispetto al torso
+    # --- Normalizza keypoints rispetto al torso ---
     def normalize_keypoints_relative_to_torso(self, person_keypoints_xyn):
 
         left_shoulder = person_keypoints_xyn[5]
@@ -329,7 +315,7 @@ class YOLOCameraApp:
 
         return relative_keypoints
     
-    # Predizione violenza
+    # --- Predizione violenza ---
     def predict_violence(self, person_keypoints_normalized, person_kpts_conf, person_id):
         print(f"Predicting violence for person ID: {person_id} frame : {len(self.person_sequences[person_id]) if person_id in self.person_sequences else 'new person'}")
 
