@@ -24,7 +24,7 @@ class ViolenceDetectionSystem:
     def __init__(self, knife_model_path, pose_model_path):
         print("Caricamento modelli in corso...")
         # Carica il modello LSTM per la rilevazione della violenza
-        self.model_lstm = load_model("models/lstm_violence_detector.keras")
+        self.model_lstm = load_model("../models/lstm_violence_detector.keras")
 
         self.model_knife = YOLO(knife_model_path)
         self.model_pose = YOLO(pose_model_path)

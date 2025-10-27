@@ -13,7 +13,7 @@ def main():
     backup_video_path = '../video-dataset/violent/cam1/37.mp4'
 
     # Inizializza la classe che gestisce YOLO
-    app = ViolenceDetectionSystem(knife_model_path="models/knife/weights/best.pt", pose_model_path="models/yolo11n-pose.pt")
+    app = ViolenceDetectionSystem(knife_model_path="../models/knife/weights/best.pt", pose_model_path="../models/yolo11n-pose.pt")
 
     # --- Tkinter GUI ---
     root = tk.Tk()

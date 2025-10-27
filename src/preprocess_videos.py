@@ -116,7 +116,7 @@ def normalize_keypoints_relative_to_torso(i, keypoints_normalized):
 
 #   Salva i keypoint normalizzati nel dataset
 def save_keypoints_to_dataset(people_data, filename, label, cam_label, default_label=0):
-    save_path = 'models/violentvideo/'
+    save_path = '../models/violentvideo/'
     os.makedirs(save_path, exist_ok=True)
 
     for pid, frames in people_data.items():

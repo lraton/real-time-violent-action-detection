@@ -1,9 +1,7 @@
 datasets
 src/.venv/
 src/__pycache__/
-/src/models/knife/knife-dataset
-src/models/pose/weights/yolo11x-pose.pt
 src/test.py
 src/convert_lstm_to_tflite.py
-src/models/lstm_violence_detector.tflite
+models/lstm_violence_detector.tflite
 src/test_det.py
