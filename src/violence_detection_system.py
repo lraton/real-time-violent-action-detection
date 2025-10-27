@@ -1,6 +1,7 @@
 import cv2
 import os
 import time
+import torch
 import numpy as np
 from collections import deque
 from ultralytics import YOLO
@@ -26,8 +27,12 @@ class ViolenceDetectionSystem:
         # Carica il modello LSTM per la rilevazione della violenza
         self.model_lstm = load_model("../models/lstm_violence_detector.keras")
 
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
         self.model_knife = YOLO(knife_model_path)
         self.model_pose = YOLO(pose_model_path)
+        self.model_pose.to(device)
+        self.model_knife.to(device)
         print("Modelli caricati.")
 
         self.saved_faces_ids = set()  # Per evitare salvataggi duplicati
@@ -35,10 +40,6 @@ class ViolenceDetectionSystem:
 
     # --- METODO PRINCIPALE CHIAMATO DAL MAIN ---
     def process_frame(self, frame):
-        """
-        Orchestra l'intero processo di detection e disegno per un singolo frame.
-        """
-
         t_start = time.time()
         # Salva una copia pulita per l'estrazione dei volti
         clean_frame_for_save = frame.copy()
@@ -58,14 +59,14 @@ class ViolenceDetectionSystem:
         person_data, person_strings_for_list = self.detect_pose(results_pose, detected_items, clean_frame_for_save)
         t_logic = (time.time() - t_logic_start) * 1000  # in ms
 
-        # Disegna tutto sul frame
+        # Disegna box persone
         t_draw_start = time.time()
-
         if results_pose and results_pose[0]:
             frame_drawn = frame.copy()
             result = results_pose[0]
             x1, y1, x2, y2 = map(int, result.boxes.xyxy[0])
-            cv2.rectangle(frame_drawn, (x1, y1), (x2, y2), (0, 255, 255), 2)
+            for data in person_data:
+                cv2.rectangle(frame_drawn, (x1, y1), (x2, y2), data["color"], 2)
         else:
             frame_drawn = frame
         t_draw = (time.time() - t_draw_start) * 1000  # in ms
@@ -80,7 +81,7 @@ class ViolenceDetectionSystem:
         t_total = (time.time() - t_start) * 1000
 
         # --- Stampa i risultati nel terminale ---
-        '''
+        
         print(f"--- ANALISI FRAME (ms) ---")
         print(f"  1. Knife Detect : {t_obj:.1f} ms")
         print(f"  2. Pose Detect  : {t_pose:.1f} ms")
@@ -89,7 +90,7 @@ class ViolenceDetectionSystem:
         print(f"  --------------------------")
         print(f"  TOTALE FRAME  : {t_total:.1f} ms  (Target: {1000/t_total:.1f} FPS)")
         print("\n")  # Aggiungi uno spazio
-        '''
+        
         return frame_drawn, all_detected_strings
 
     # --- RILEVAMENTO OGGETTI ---
