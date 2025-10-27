@@ -10,6 +10,7 @@ def main():
     prev_time = 0  # Tempo del frame precedente
     fps = 0  # Valore FPS calcolato
     camera_index = 1  # Modifica questo indice se necessario (spesso 0 o 1)
+    backup_video_path = '../video-dataset/violent/cam1/37.mp4'
 
     # Inizializza la classe che gestisce YOLO
     app = ViolenceDetectionSystem(knife_model_path="models/knife/weights/best.pt", pose_model_path="models/yolo11n-pose.pt")
@@ -32,14 +33,20 @@ def main():
     object_list.pack(fill=tk.Y, expand=True)
 
     # --- Webcam ---
+    print(f"Provo ad aprire la webcam all'indice {camera_index}...")
     cap = cv2.VideoCapture(camera_index)
     if not cap.isOpened():
         print(f"Errore: Impossibile aprire la webcam all'indice {camera_index}.")
-        root.destroy()
-        return
+        # Prova ad aprire un video di backup
+        print(f"Provo ad aprire il video di backup: {backup_video_path}...")
+        cap = cv2.VideoCapture(backup_video_path)
+        if not cap.isOpened():
+            print(f"Errore: Impossibile aprire il video di backup.")
+            root.destroy()
+            return
 
-    cap.set(3, 640)
-    cap.set(4, 480)
+    cap.set(3, 192)
+    cap.set(4, 256)
 
     # Avvia il loop di aggiornamento
     update_frame(root, lmain, cap, object_list, app, prev_time, fps)

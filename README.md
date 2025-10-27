@@ -57,7 +57,7 @@ python yolo_run.py
 - [x] Modificare classe yoloapp
   - [x] Dividere in piu classi, predict e gui
 - [ ] Ottimizzare
-  - [X] Drawing      : 0.1 ms , Se rimuovo plot delle pose
+  - [X] Drawing      : 1.0 ms , Se rimuovo plot delle pose
   - [ ] Knife Detect : 28.0 ms
   - [ ] Pose Detect  : 73.5 ms
     - [ ] Provare MoveNet Lightning

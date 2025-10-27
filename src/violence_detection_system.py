@@ -80,6 +80,7 @@ class ViolenceDetectionSystem:
         t_total = (time.time() - t_start) * 1000
 
         # --- Stampa i risultati nel terminale ---
+        '''
         print(f"--- ANALISI FRAME (ms) ---")
         print(f"  1. Knife Detect : {t_obj:.1f} ms")
         print(f"  2. Pose Detect  : {t_pose:.1f} ms")
@@ -88,7 +89,7 @@ class ViolenceDetectionSystem:
         print(f"  --------------------------")
         print(f"  TOTALE FRAME  : {t_total:.1f} ms  (Target: {1000/t_total:.1f} FPS)")
         print("\n")  # Aggiungi uno spazio
-
+        '''
         return frame_drawn, all_detected_strings
 
     # --- RILEVAMENTO OGGETTI ---
@@ -174,7 +175,7 @@ class ViolenceDetectionSystem:
                     self.extract_suspicious_face(clean_frame, person_kpts_xy, person_box, person_id)
 
                 # Prepara i dati
-                final_label = f"{person_prefix} {person_id} | {status_text} {score_text}"
+                final_label = f"{person_prefix} {person_id} | {status_text} {score_text} | Confidence: {person_kpts_conf.mean():.2f}"
 
                 text_position = (x1, max(y2 - 10, 20))
 
@@ -267,7 +268,8 @@ class ViolenceDetectionSystem:
         if person_id not in self.person_sequences:
             self.person_sequences[person_id] = deque(maxlen=150)
 
-        print(f"Predicting violence for person ID: {person_id} frame {len(self.person_sequences[person_id])}")
+        #print(f"Predicting violence for person ID: {person_id} frame {len(self.person_sequences[person_id])}")
+
         current_sequence = self.person_sequences[person_id]
         current_sequence.append(flattened)
 
