@@ -17,7 +17,7 @@ This project implements a real-time detection system to identify potentially dan
     
 - ~~**MediaPipe**: Human pose estimation.~~
     
-    - [MediaPipe Google](ai.google.dev/edge/mediapipe/solutions/guide?hl=it)
+    - ~~[MediaPipe Google](ai.google.dev/edge/mediapipe/solutions/guide?hl=it)~~
         
 - **Violence Detection Dataset**: Dataset specifically designed for identifying violent actions.
     
