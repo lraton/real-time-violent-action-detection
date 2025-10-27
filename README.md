@@ -56,7 +56,14 @@ python yolo_run.py
 # TODO
 - [x] Modificare classe yoloapp
   - [x] Dividere in piu classi, predict e gui
-- [ ] Ottimizzare finestra, troppo lag dato da tkinter
+- [ ] Ottimizzare
+  - [ ] Drawing      : 0.0 ms , Se rimuovo plot delle pose
+  - [ ] Knife Detect : 28.0 ms
+  - [ ] Pose Detect  : 73.5 ms
+    - [ ] Provare MoveNet Lightning
+  - [ ] Logic/LSTM   : 78.0 ms
+    - [ ] tf.lite.TFLiteConverter
+    - [ ] Quantizzazione 8bit
 ---
 
 ## 📝 Workflow Steps

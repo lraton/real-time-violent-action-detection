@@ -50,7 +50,7 @@ class ViolenceDetectionSystem:
 
         # Prende le pose e traccia le persone
         t_pose_start = time.time()
-        results_pose = self.model_pose.track(frame, tracker="botsort.yaml", persist=True, verbose=False, imgsz=320, half=True, device=0, conf=0.6)
+        results_pose = self.model_pose.track(frame, tracker="botsort.yaml", persist=True, verbose=False, imgsz=320, half=True, conf=0.6)
         t_pose = (time.time() - t_pose_start) * 1000  # in ms
 
         # Processa i risultati delle pose
@@ -60,8 +60,10 @@ class ViolenceDetectionSystem:
 
         # Disegna tutto sul frame
         t_draw_start = time.time()
+
         if results_pose and results_pose[0]:
-            frame_drawn = results_pose[0].plot()  # Disegna le pose
+            frame_drawn = frame
+            #frame_drawn = results_pose[0].plot()  # Disegna le pose DA CAMBIARE, PLOT TROPPO LENTO
         else:
             frame_drawn = frame  # Nessuna posa, usa il frame originale
         t_draw = (time.time() - t_draw_start) * 1000  # in ms
@@ -91,7 +93,7 @@ class ViolenceDetectionSystem:
     def detect_objects(self, frame):
         detected = []
 
-        results_det = self.model_knife(frame, verbose=False, imgsz=320, half=True, device=0, conf=0.6)  # Rileva oggetti (coltelli)
+        results_det = self.model_knife(frame, verbose=False, imgsz=320, half=True, conf=0.6)  # Rileva oggetti (coltelli)
 
         for result in results_det:
             class_names = result.names
@@ -109,16 +111,6 @@ class ViolenceDetectionSystem:
 
         person_data_for_drawing = []  # Lista di dizionari per 'draw_detections'
         person_strings_for_list = set()  # Set di stringhe per la lista GUI
-
-        # Pulisci le sequenze di persone non più tracciate
-        current_ids_in_frame = set()
-        if results_pose and results_pose[0].boxes is not None and results_pose[0].boxes.id is not None:
-            current_ids_in_frame.update(results_pose[0].boxes.id.cpu().numpy().astype(int).tolist())
-
-        ids_to_remove = set(self.person_sequences.keys()) - current_ids_in_frame
-        for old_id in ids_to_remove:
-            if old_id in self.person_sequences:
-                del self.person_sequences[old_id]
 
         # Itera sui risultati
         for result in results_pose:
@@ -208,7 +200,6 @@ class ViolenceDetectionSystem:
         return frame
 
     # --- ESTRAZIONE VOLTO ---
-
     def extract_suspicious_face(self, frame, person_keypoints, person_box, person_id):
         # person_keypoints è (17, 2)
         face_kpts = person_keypoints[:5]  # Naso (0), Occhi (1, 2), Orecchie (3, 4)
@@ -266,7 +257,6 @@ class ViolenceDetectionSystem:
 
     # --- PREDIZIONE VIOLENZA ---
     def predict_violence(self, person_keypoints_normalized, person_kpts_conf, person_id):
-        # print(f"Predicting violence for person ID: {person_id}")
 
         relative_kpts_xy = self.normalize_keypoints_relative_to_torso(person_keypoints_normalized)
         keypoints_with_conf = np.hstack([relative_kpts_xy, person_kpts_conf[:, None]])
@@ -275,6 +265,7 @@ class ViolenceDetectionSystem:
         if person_id not in self.person_sequences:
             self.person_sequences[person_id] = deque(maxlen=150)
 
+        print(f"Predicting violence for person ID: {person_id} frame {len(self.person_sequences[person_id])}")
         current_sequence = self.person_sequences[person_id]
         current_sequence.append(flattened)
 
