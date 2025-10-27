@@ -62,10 +62,12 @@ class ViolenceDetectionSystem:
         t_draw_start = time.time()
 
         if results_pose and results_pose[0]:
-            frame_drawn = frame
-            #frame_drawn = results_pose[0].plot()  # Disegna le pose DA CAMBIARE, PLOT TROPPO LENTO
+            frame_drawn = frame.copy()
+            result = results_pose[0]
+            x1, y1, x2, y2 = map(int, result.boxes.xyxy[0])
+            cv2.rectangle(frame_drawn, (x1, y1), (x2, y2), (0, 255, 255), 2)
         else:
-            frame_drawn = frame  # Nessuna posa, usa il frame originale
+            frame_drawn = frame
         t_draw = (time.time() - t_draw_start) * 1000  # in ms
 
         # Disegna oggetti e etichette persone
