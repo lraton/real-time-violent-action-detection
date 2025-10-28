@@ -51,7 +51,7 @@ class ViolenceDetectionSystem:
 
         # Prende le pose e traccia le persone
         t_pose_start = time.time()
-        results_pose = self.model_pose.track(frame, tracker="botsort.yaml", persist=True, verbose=False, imgsz=320, half=True, conf=0.6)
+        results_pose = self.model_pose.track(frame, tracker="botsort.yaml", persist=True, verbose=False, imgsz=256, half=True, conf=0.6)
         t_pose = (time.time() - t_pose_start) * 1000  # in ms
 
         # Processa i risultati delle pose
@@ -97,7 +97,7 @@ class ViolenceDetectionSystem:
     def detect_objects(self, frame):
         detected = []
 
-        results_det = self.model_knife(frame, verbose=False, imgsz=320, half=True, conf=0.6)  # Rileva oggetti (coltelli)
+        results_det = self.model_knife(frame, verbose=False, imgsz=256, half=True, conf=0.6)  # Rileva oggetti (coltelli)
 
         for result in results_det:
             class_names = result.names

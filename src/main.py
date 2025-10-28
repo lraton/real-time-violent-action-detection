@@ -45,7 +45,7 @@ def main():
             root.destroy()
             return
 
-    cap.set(3, 192)
+    cap.set(3, 256)
     cap.set(4, 256)
 
     # Avvia il loop di aggiornamento
