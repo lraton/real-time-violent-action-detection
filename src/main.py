@@ -5,11 +5,16 @@ from tkinter import ttk
 from PIL import Image, ImageTk
 from violence_detection_system import ViolenceDetectionSystem
 
+counter_frames = 0  # Contatore dei frame processati
+old_frame = None  # Memorizza l'ultimo frame processato
+old_all_detected_strings = []  # Memorizza l'ultimo risultato di rilevamento
+frame_skip = 4  # Numero di frame da saltare prima di un nuovo processamento
+
 
 def main():
     prev_time = 0  # Tempo del frame precedente
     fps = 0  # Valore FPS calcolato
-    camera_index = 1  # Modifica questo indice se necessario (spesso 0 o 1)
+    camera_index = 0  # Modifica questo indice se necessario (spesso 0 o 1)
     backup_video_path = '../video-dataset/violent/cam1/37.mp4'
 
     # Inizializza la classe che gestisce YOLO
@@ -61,6 +66,13 @@ def main():
 
 # --- Aggiornamento frame ---
 def update_frame(root, lmain, cap, object_list, app, prev_time, fps):
+    global counter_frames
+    global old_frame
+    global old_all_detected_strings
+    global frame_skip
+    # Reset counter_frames ogni 4 frame
+    if counter_frames == frame_skip:
+        counter_frames = 0
 
     # Calcolo FPS
     current_time = time.time()
@@ -76,7 +88,16 @@ def update_frame(root, lmain, cap, object_list, app, prev_time, fps):
         root.after(50, update_frame, root, lmain, cap, object_list, app, prev_time, fps)
         return
     try:
-        frame_drawn, all_detected_strings = app.process_frame(frame)
+        if counter_frames == 0:
+            print('processo frame 0')
+            frame_drawn, all_detected_strings = app.process_frame(frame)
+            old_frame = frame_drawn
+            old_all_detected_strings = all_detected_strings
+        else:
+            print('uso frame vecchio')
+            #frame_drawn = frame #usa il frame originale per evitare scatti ma senza disegni
+            frame_drawn = old_frame if old_frame is not None else frame  # Usa l'ultimo frame processato se disponibile ma piu scattoso
+            all_detected_strings = old_all_detected_strings if old_all_detected_strings else ["Nessun oggetto rilevato"]
     except Exception as e:
         print(f"Errore durante process_frame: {e}")
         # Continua a mostrare il frame originale in caso di errore
@@ -103,6 +124,9 @@ def update_frame(root, lmain, cap, object_list, app, prev_time, fps):
     imgtk = ImageTk.PhotoImage(image=img)
     lmain.imgtk = imgtk
     lmain.configure(image=imgtk)
+
+    # Incrementa il contatore dei frame
+    counter_frames += 1
 
     # Richiama questa funzione dopo 10 ms
     root.after(1, update_frame, root, lmain, cap, object_list, app, prev_time, fps)
