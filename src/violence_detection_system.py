@@ -39,7 +39,7 @@ class ViolenceDetectionSystem:
         self.person_sequences = {}  # Sequenze di keypoints per ogni persona ID
 
     # --- METODO PRINCIPALE CHIAMATO DAL MAIN ---
-    def process_frame(self, frame):
+    def process_frame(self, frame, frame_skip):
         t_start = time.time()
         # Salva una copia pulita per l'estrazione dei volti
         clean_frame_for_save = frame.copy()
@@ -56,7 +56,7 @@ class ViolenceDetectionSystem:
 
         # Processa i risultati delle pose
         t_logic_start = time.time()
-        person_data, person_strings_for_list = self.detect_pose(results_pose, detected_items, clean_frame_for_save)
+        person_data, person_strings_for_list = self.detect_pose(results_pose, detected_items, clean_frame_for_save, frame_skip)
         t_logic = (time.time() - t_logic_start) * 1000  # in ms
 
         # Disegna box persone
@@ -81,7 +81,7 @@ class ViolenceDetectionSystem:
         t_total = (time.time() - t_start) * 1000
 
         # --- Stampa i risultati nel terminale ---
-        
+        '''
         print(f"--- ANALISI FRAME (ms) ---")
         print(f"  1. Knife Detect : {t_obj:.1f} ms")
         print(f"  2. Pose Detect  : {t_pose:.1f} ms")
@@ -90,7 +90,8 @@ class ViolenceDetectionSystem:
         print(f"  --------------------------")
         print(f"  TOTALE FRAME  : {t_total:.1f} ms  (Target: {1000/t_total:.1f} FPS)")
         print("\n")  # Aggiungi uno spazio
-        
+        '''
+
         return frame_drawn, all_detected_strings
 
     # --- RILEVAMENTO OGGETTI ---
@@ -111,7 +112,7 @@ class ViolenceDetectionSystem:
         return detected
 
     # --- RILEVAMENTO POSE E ANALISI VIOLENZA ---
-    def detect_pose(self, results_pose, detected_items, clean_frame):
+    def detect_pose(self, results_pose, detected_items, clean_frame, frame_skip):
 
         person_data_for_drawing = []  # Lista di dizionari per 'draw_detections'
         person_strings_for_list = set()  # Set di stringhe per la lista GUI
@@ -150,7 +151,7 @@ class ViolenceDetectionSystem:
                         break
 
                 # Predizione della violenza
-                violence_score = self.predict_violence(person_kpts_xyn, person_kpts_conf, person_id)
+                violence_score = self.predict_violence(person_kpts_xyn, person_kpts_conf, frame_skip, person_id)
 
                 is_violent = False
                 status_text = "Non-Violenta"
@@ -260,7 +261,7 @@ class ViolenceDetectionSystem:
         return relative_keypoints
 
     # --- PREDIZIONE VIOLENZA ---
-    def predict_violence(self, person_keypoints_normalized, person_kpts_conf, person_id):
+    def predict_violence(self, person_keypoints_normalized, person_kpts_conf, frame_skip, person_id):
 
         relative_kpts_xy = self.normalize_keypoints_relative_to_torso(person_keypoints_normalized)
         keypoints_with_conf = np.hstack([relative_kpts_xy, person_kpts_conf[:, None]])
@@ -273,6 +274,11 @@ class ViolenceDetectionSystem:
 
         current_sequence = self.person_sequences[person_id]
         current_sequence.append(flattened)
+
+        # Aggiungi padding se necessario per ogni frame saltato
+        for _ in range(frame_skip - 1):
+            print("Adding padding frame for skipped frame")
+            current_sequence.append(np.zeros(51, dtype=np.float32))  # Padding se necessario
 
         if len(current_sequence) < 150:
             return None  # Sequenza non ancora piena

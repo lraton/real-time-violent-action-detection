@@ -8,7 +8,7 @@ from violence_detection_system import ViolenceDetectionSystem
 counter_frames = 0  # Contatore dei frame processati
 old_frame = None  # Memorizza l'ultimo frame processato
 old_all_detected_strings = []  # Memorizza l'ultimo risultato di rilevamento
-frame_skip = 4  # Numero di frame da saltare prima di un nuovo processamento
+frame_skip = 2  # Numero di frame da saltare prima di un nuovo processamento
 
 
 def main():
@@ -83,20 +83,22 @@ def update_frame(root, lmain, cap, object_list, app, prev_time, fps):
 
     success, frame = cap.read()
     if not success:
-        print("Errore: Impossibile leggere il frame dalla webcam.")
-        # Riprova dopo un breve intervallo
-        root.after(50, update_frame, root, lmain, cap, object_list, app, prev_time, fps)
+        print("Fine del video o errore nella lettura del frame.")
+        # Chiudi tutto
+        cap.release()
+        root.quit()  # Chiude il mainloop di Tkinter
+        root.destroy()  # Distrugge la finestra
         return
-    try:
+    try:  # Processa il frame solo ogni 'frame_skip' frame
         if counter_frames == 0:
-            print('processo frame 0')
-            frame_drawn, all_detected_strings = app.process_frame(frame)
+            print('Processo nuovo frame')
+            frame_drawn, all_detected_strings = app.process_frame(frame, frame_skip)
             old_frame = frame_drawn
             old_all_detected_strings = all_detected_strings
-        else:
-            print('uso frame vecchio')
-            #frame_drawn = frame #usa il frame originale per evitare scatti ma senza disegni
-            frame_drawn = old_frame if old_frame is not None else frame  # Usa l'ultimo frame processato se disponibile ma piu scattoso
+        else:  # Usa l'ultimo frame processato
+            print('Uso frame vecchio')
+            frame_drawn = frame  #usa il frame originale per evitare scatti ma senza disegni
+            #frame_drawn = old_frame if old_frame is not None else frame  # Usa l'ultimo frame processato se disponibile ma piu scattoso
             all_detected_strings = old_all_detected_strings if old_all_detected_strings else ["Nessun oggetto rilevato"]
     except Exception as e:
         print(f"Errore durante process_frame: {e}")
@@ -107,6 +109,11 @@ def update_frame(root, lmain, cap, object_list, app, prev_time, fps):
     # Disegna gli FPS sul frame (già disegnato)
     fps_text = f"FPS: {fps:.1f}"
     cv2.putText(frame_drawn, fps_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2, cv2.LINE_AA)
+
+    # Ridimensiona il frame per la visualizzazione nella GUI
+    display_width = 640  # Larghezza desiderata
+    display_height = 480  # Altezza desiderata
+    frame_drawn = cv2.resize(frame_drawn, (display_width, display_height))
 
     # --- Aggiorna GUI ---
 
