@@ -1,23 +1,29 @@
 from ultralytics import YOLO
 from natsort import natsorted
 import numpy as np
+import torch
 import cv2
 import os
 
 # Carica il modello
-model_pose = YOLO("models/pose/weights/best.pt")
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+model_pose = YOLO("../models/yolo11n-pose.pt")
+model_pose.to(device)
 
 # Cartelle dei video
 video_dirs = [
     '../video-dataset/violent/cam1/',
     '../video-dataset/violent/cam2/',
-    ##'../video-dataset/non-violent/cam1/',
-    ##'../video-dataset/non-violent/cam2/'
+    '../video-dataset/violent/cam3/',
+    '../video-dataset/non-violent/cam1/',
+    '../video-dataset/non-violent/cam2/'
 ]
 
 # INDICI DEI KEYPOINT NEL FORMATO COCO (17 KEYPOINTS)
 LEFT_SHOULDER_IDX = 5
 RIGHT_SHOULDER_IDX = 6
+
 
 def main():
 
@@ -32,8 +38,10 @@ def main():
 
         if 'cam1' in path_to_video:
             cam_label = 'cam1'
-        else:
+        elif 'cam2' in path_to_video:
             cam_label = 'cam2'
+        else:
+            cam_label = 'cam3'
 
         for filename in natsorted(os.listdir(path_to_video)):
             if not filename.lower().endswith(('.mp4', '.avi', '.mov')):
@@ -68,15 +76,16 @@ def main():
                         if person_id not in people_data:  # Inizializza la lista per la persona se non esiste
                             people_data[person_id] = []
                         people_data[person_id].append(relative_keypoints_with_conf)  # Aggiungi i keypoint relativi alla lista della persona
-
+                '''
                 if default_label == 1:
                     video_display(frame_result)
                     if cv2.waitKey(1) & 0xFF == ord("q"):
                         break
-
+                '''
             cv2.destroyAllWindows()
 
             if default_label == 1:
+                '''
                 violent_ids = input(f"Inserisci gli id violenti separati da spazio {list(people_data.keys())}: ").split()
                 violent_ids = [int(x) for x in violent_ids]
 
@@ -90,6 +99,9 @@ def main():
                     # salva i keypoint di questa persona
                     temp_dict = {pid: frames}
                     save_keypoints_to_dataset(temp_dict, filename, label, cam_label, default_label)
+                    '''
+                # Salva i keypoint di tutte le persone con label 1
+                save_keypoints_to_dataset(people_data, filename, default_label, cam_label, default_label)
             else:
                 # Salva i keypoint di tutte le persone con label 0
                 save_keypoints_to_dataset(people_data, filename, default_label, cam_label)
