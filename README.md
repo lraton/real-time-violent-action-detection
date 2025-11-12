@@ -57,7 +57,8 @@ python yolo_run.py
 - [x] Modificare classe yoloapp
   - [x] Dividere in piu classi, predict e gui
 -  [X] Elaborare solo 1 frame su N
-   -  [ ] In base a N, per ogni frame processato aggiungere N fram vuoti (o uguali) per lstm, che ne vuole comunque 150
+   -  [X] In base a N, per ogni frame processato aggiungere N fram vuoti (o uguali) per lstm, che ne vuole comunque 150
+- [ ] Addestrare nuovo modello con non-violent Cam3
 - [ ] Ottimizzare
   - [X] Drawing      : 1.0 ms , Se rimuovo plot delle pose
   - [ ] Knife Detect : 28.0 ms

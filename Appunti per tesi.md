@@ -9,6 +9,10 @@
   - https://www.researchgate.net/figure/Comparison-of-the-effects-of-EL-HRNet-and-other-lightweight-human-pose-estimation-models_tbl3_377276793
   - https://pallawi-ds.medium.com/which-human-pose-estimation-model-should-you-pick-to-realise-your-ideas-for-a-video-analytics-6ca754cc1f4e
 
+- Datasets per l'allenamento usati
+  - https://github.com/airtlab/A-Dataset-for-Automatic-Violence-Detection-in-Videos
+  - https://www.kaggle.com/datasets/mohamedmustafa/real-life-violence-situations-dataset?resource=download
+
 - OpenCV per prendere la webcam
 - Tkinter per interfaccia grafica
 
