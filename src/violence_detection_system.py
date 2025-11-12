@@ -25,7 +25,7 @@ class ViolenceDetectionSystem:
     def __init__(self, knife_model_path, pose_model_path):
         print("Caricamento modelli in corso...")
         # Carica il modello LSTM per la rilevazione della violenza
-        self.model_lstm = load_model("../models/lstm_violence_detector.keras")
+        self.model_lstm = load_model("../models/lstm_violence_detector_v2.keras")
 
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -81,7 +81,7 @@ class ViolenceDetectionSystem:
         t_total = (time.time() - t_start) * 1000
 
         # --- Stampa i risultati nel terminale ---
-        '''
+        #'''
         print(f"--- ANALISI FRAME (ms) ---")
         print(f"  1. Knife Detect : {t_obj:.1f} ms")
         print(f"  2. Pose Detect  : {t_pose:.1f} ms")
@@ -90,7 +90,7 @@ class ViolenceDetectionSystem:
         print(f"  --------------------------")
         print(f"  TOTALE FRAME  : {t_total:.1f} ms  (Target: {1000/t_total:.1f} FPS)")
         print("\n")  # Aggiungi uno spazio
-        '''
+        #'''
 
         return frame_drawn, all_detected_strings
 
@@ -174,7 +174,8 @@ class ViolenceDetectionSystem:
 
                 # Salva il volto se sospetto o violento (e non già salvato)
                 if (is_suspect or is_violent) and person_id not in self.saved_faces_ids:
-                    self.extract_suspicious_face(clean_frame, person_kpts_xy, person_box, person_id)
+                        print(f" {time.strftime('%Y/%m/%d-%H:%M:%S')} {person_prefix} {person_id} | {status_text} {score_text} | Confidence: {person_kpts_conf.mean():.2f}")
+                        self.extract_suspicious_face(clean_frame, person_kpts_xy, person_box, person_id)
 
                 # Prepara i dati
                 final_label = f"{person_prefix} {person_id} | {status_text} {score_text} | Confidence: {person_kpts_conf.mean():.2f}"
@@ -277,7 +278,7 @@ class ViolenceDetectionSystem:
 
         # Aggiungi padding se necessario per ogni frame saltato
         for _ in range(frame_skip - 1):
-            print("Adding padding frame for skipped frame")
+            #print("Adding padding frame for skipped frame")
             current_sequence.append(np.zeros(51, dtype=np.float32))  # Padding se necessario
 
         if len(current_sequence) < 150:

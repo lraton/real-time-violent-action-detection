@@ -15,7 +15,7 @@ def main():
     prev_time = 0  # Tempo del frame precedente
     fps = 0  # Valore FPS calcolato
     camera_index = 0  # Modifica questo indice se necessario (spesso 0 o 1)
-    backup_video_path = '../video-dataset/violent/cam1/37.mp4'
+    backup_video_path = '../video-dataset/non-violent/cam1/15.mp4'
 
     # Inizializza la classe che gestisce YOLO
     app = ViolenceDetectionSystem(knife_model_path="../models/knife/weights/best.pt", pose_model_path="../models/yolo11n-pose.pt")
@@ -91,12 +91,12 @@ def update_frame(root, lmain, cap, object_list, app, prev_time, fps):
         return
     try:  # Processa il frame solo ogni 'frame_skip' frame
         if counter_frames == 0:
-            print('Processo nuovo frame')
+            #print('Processo nuovo frame')
             frame_drawn, all_detected_strings = app.process_frame(frame, frame_skip)
             old_frame = frame_drawn
             old_all_detected_strings = all_detected_strings
         else:  # Usa l'ultimo frame processato
-            print('Uso frame vecchio')
+            #print('Uso frame vecchio')
             frame_drawn = frame  #usa il frame originale per evitare scatti ma senza disegni
             #frame_drawn = old_frame if old_frame is not None else frame  # Usa l'ultimo frame processato se disponibile ma piu scattoso
             all_detected_strings = old_all_detected_strings if old_all_detected_strings else ["Nessun oggetto rilevato"]
