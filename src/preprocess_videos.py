@@ -1,3 +1,4 @@
+from multiprocessing import Pool, cpu_count
 from ultralytics import YOLO
 from natsort import natsorted
 import numpy as np
@@ -14,10 +15,11 @@ model_pose.to(device)
 # Cartelle dei video
 video_dirs = [
     '../video-dataset/violent/cam1/',
-    '../video-dataset/violent/cam2/',
+    '../video-dataset/violent/cam2/'
     '../video-dataset/violent/cam3/',
     '../video-dataset/non-violent/cam1/',
-    '../video-dataset/non-violent/cam2/'
+    '../video-dataset/non-violent/cam2/',
+    '../video-dataset/non-violent/cam3/'
 ]
 
 # INDICI DEI KEYPOINT NEL FORMATO COCO (17 KEYPOINTS)
@@ -25,67 +27,65 @@ LEFT_SHOULDER_IDX = 5
 RIGHT_SHOULDER_IDX = 6
 
 
-def main():
+def process_video_folder(path_to_video):
+    # Imposta la label in base alla cartella
+    if 'non-violent' in path_to_video:
+        default_label = 0
+    else:
+        default_label = 1
 
-    for path_to_video in video_dirs:
-        # Imposta la label in base alla cartella
-        if 'non-violent' in path_to_video:
-            default_label = 0
-        else:
-            default_label = 1
+    print(f"{default_label}")
 
-        print(f"{default_label}")
+    if 'cam1' in path_to_video:
+        cam_label = 'cam1'
+    elif 'cam2' in path_to_video:
+        cam_label = 'cam2'
+    else:
+        cam_label = 'cam3'
 
-        if 'cam1' in path_to_video:
-            cam_label = 'cam1'
-        elif 'cam2' in path_to_video:
-            cam_label = 'cam2'
-        else:
-            cam_label = 'cam3'
+    for filename in natsorted(os.listdir(path_to_video)):
+        if not filename.lower().endswith(('.mp4', '.avi', '.mov')):
+            continue  # salta file non video
 
-        for filename in natsorted(os.listdir(path_to_video)):
-            if not filename.lower().endswith(('.mp4', '.avi', '.mov')):
-                continue  # salta file non video
+        print(f"Elaboro video: {filename} in cartella {path_to_video}")
 
-            print(f"Elaboro video: {filename} in cartella {path_to_video}")
+        people_data = {}  # {person_id: [frames]} dati per ogni persona per video
 
-            people_data = {}  # {person_id: [frames]} dati per ogni persona per video
+        # Avvia il tracking sul video
+        results_generator = model_pose.track(
+            path_to_video + filename,
+            tracker="botsort.yaml",
+            #persist=True,
+            stream=True,
+            verbose=False)
 
-            # Avvia il tracking sul video
-            results_generator = model_pose.track(
-                path_to_video + filename,
-                tracker="botsort.yaml",
-                #persist=True,
-                stream=True,
-                verbose=False)
+        # Processa ogni frame del video
+        for frame_result in results_generator:
+            if frame_result.boxes.id is not None:
 
-            # Processa ogni frame del video
-            for frame_result in results_generator:
-                if frame_result.boxes.id is not None:
+                person_ids = frame_result.boxes.id.cpu().numpy().astype(int)
+                keypoints_normalized = frame_result.keypoints.xyn.cpu().numpy()
 
-                    person_ids = frame_result.boxes.id.cpu().numpy().astype(int)
-                    keypoints_normalized = frame_result.keypoints.xyn.cpu().numpy()
+                # Per ogni persona rilevata nel frame
+                for i, person_id in enumerate(person_ids):
+                    relative_keypoints = normalize_keypoints_relative_to_torso(i, keypoints_normalized)  # Calcola i keypoint relativi
 
-                    # Per ogni persona rilevata nel frame
-                    for i, person_id in enumerate(person_ids):
-                        relative_keypoints = normalize_keypoints_relative_to_torso(i, keypoints_normalized)  # Calcola i keypoint relativi
+                    conf = frame_result.keypoints.conf[i].cpu().numpy()  # sposta su CPU e converti in NumPy
+                    relative_keypoints_with_conf = np.hstack([relative_keypoints, conf[:, None]])  # Aggiungi la conf come terza colonna
 
-                        conf = frame_result.keypoints.conf[i].cpu().numpy()  # sposta su CPU e converti in NumPy
-                        relative_keypoints_with_conf = np.hstack([relative_keypoints, conf[:, None]])  # Aggiungi la conf come terza colonna
-
-                        if person_id not in people_data:  # Inizializza la lista per la persona se non esiste
-                            people_data[person_id] = []
-                        people_data[person_id].append(relative_keypoints_with_conf)  # Aggiungi i keypoint relativi alla lista della persona
-                '''
+                    if person_id not in people_data:  # Inizializza la lista per la persona se non esiste
+                        people_data[person_id] = []
+                    people_data[person_id].append(relative_keypoints_with_conf)  # Aggiungi i keypoint relativi alla lista della persona
+            '''
                 if default_label == 1:
                     video_display(frame_result)
                     if cv2.waitKey(1) & 0xFF == ord("q"):
                         break
                 '''
-            cv2.destroyAllWindows()
+        cv2.destroyAllWindows()
 
-            if default_label == 1:
-                '''
+        if default_label == 1:
+            '''
                 violent_ids = input(f"Inserisci gli id violenti separati da spazio {list(people_data.keys())}: ").split()
                 violent_ids = [int(x) for x in violent_ids]
 
@@ -100,13 +100,13 @@ def main():
                     temp_dict = {pid: frames}
                     save_keypoints_to_dataset(temp_dict, filename, label, cam_label, default_label)
                     '''
-                # Salva i keypoint di tutte le persone con label 1
-                save_keypoints_to_dataset(people_data, filename, default_label, cam_label, default_label)
-            else:
-                # Salva i keypoint di tutte le persone con label 0
-                save_keypoints_to_dataset(people_data, filename, default_label, cam_label)
+            # Salva i keypoint di tutte le persone con label 1
+            save_keypoints_to_dataset(people_data, filename, default_label, cam_label, default_label)
+        else:
+            # Salva i keypoint di tutte le persone con label 0
+            save_keypoints_to_dataset(people_data, filename, default_label, cam_label)
 
-            print(f"People data collected so far: {len(people_data)} individuals.")
+        print(f"People data collected so far: {len(people_data)} individuals.")
 
 
 # Funzione per normalizzare i keypoint rispetto al centro del torace
@@ -128,7 +128,7 @@ def normalize_keypoints_relative_to_torso(i, keypoints_normalized):
 
 #   Salva i keypoint normalizzati nel dataset
 def save_keypoints_to_dataset(people_data, filename, label, cam_label, default_label=0):
-    save_path = '../models/violentvideo/'
+    save_path = '../models/lstm_dataset/'
     os.makedirs(save_path, exist_ok=True)
 
     for pid, frames in people_data.items():
@@ -152,6 +152,16 @@ def video_display(frame_result):
     display_frame = cv2.resize(annotated_frame, (1080, 720), interpolation=cv2.INTER_AREA)
     # Mostra il frame nella finestra ridimensionabile
     cv2.imshow("Video Annotation", display_frame)
+
+
+def main():
+    # Usa metà dei core disponibili per sicurezza
+    num_workers = min(len(video_dirs), max(1, cpu_count() // 2))
+    print(f"Avvio {num_workers} processi in parallelo...")
+
+    # Esegui il processing in parallelo
+    with Pool(num_workers) as pool:
+        pool.map(process_video_folder, video_dirs)
 
 
 if __name__ == '__main__':
