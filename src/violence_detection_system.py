@@ -22,10 +22,10 @@ class ViolenceDetectionSystem:
     # Scheletro
     SKELETON = [(5, 6), (5, 7), (7, 9), (6, 8), (8, 10), (11, 12), (5, 11), (6, 12), (11, 13), (13, 15), (12, 14), (14, 16)]
 
-    def __init__(self, knife_model_path, pose_model_path):
+    def __init__(self, knife_model_path, pose_model_path, lstm_model_path):
         print("Caricamento modelli in corso...")
         # Carica il modello LSTM per la rilevazione della violenza
-        self.model_lstm = load_model("../models/lstm_violence_detector_v2.keras")
+        self.model_lstm = load_model(lstm_model_path)
 
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
