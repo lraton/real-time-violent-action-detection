@@ -81,7 +81,7 @@ class ViolenceDetectionSystem:
         t_total = (time.time() - t_start) * 1000
 
         # --- Stampa i risultati nel terminale ---
-        #'''
+        '''
         print(f"--- ANALISI FRAME (ms) ---")
         print(f"  1. Knife Detect : {t_obj:.1f} ms")
         print(f"  2. Pose Detect  : {t_pose:.1f} ms")
@@ -90,7 +90,7 @@ class ViolenceDetectionSystem:
         print(f"  --------------------------")
         print(f"  TOTALE FRAME  : {t_total:.1f} ms  (Target: {1000/t_total:.1f} FPS)")
         print("\n")  # Aggiungi uno spazio
-        #'''
+        '''
 
         return frame_drawn, all_detected_strings
 
@@ -173,9 +173,12 @@ class ViolenceDetectionSystem:
                     box_color = self.COLOR_VIOLENT  # Se è sospetto, colora di rosso
 
                 # Salva il volto se sospetto o violento (e non già salvato)
-                if (is_suspect or is_violent) and person_id not in self.saved_faces_ids:
-                        print(f" {time.strftime('%Y/%m/%d-%H:%M:%S')} {person_prefix} {person_id} | {status_text} {score_text} | Confidence: {person_kpts_conf.mean():.2f}")
-                        self.extract_suspicious_face(clean_frame, person_kpts_xy, person_box, person_id)
+                if (is_suspect or is_violent):
+                        log_message = f"{time.strftime('%Y/%m/%d-%H:%M:%S')} {person_prefix} {person_id} | {status_text} {score_text} | Confidence: {person_kpts_conf.mean():.2f}" 
+                        print(log_message)
+                        self.write_log(log_message)
+                        if person_id not in self.saved_faces_ids:
+                            self.extract_suspicious_face(clean_frame, person_kpts_xy, person_box, person_id)
 
                 # Prepara i dati
                 final_label = f"{person_prefix} {person_id} | {status_text} {score_text} | Confidence: {person_kpts_conf.mean():.2f}"
@@ -246,6 +249,11 @@ class ViolenceDetectionSystem:
                 cv2.imwrite(face_filename, face_image)
                 # print(f"Volto sospetto salvato: {face_filename}")
                 self.saved_faces_ids.add(person_id)
+    #--- SCRITTURA LOG ---
+    def write_log(self, message):
+        with open(f"log/log{time.strftime('_%Y%m%d')}.txt", "a") as f:
+            f.write(f"{message}\n")
+
 
     #--- NORMALIZZAZIONE KEYPOINT TO TORSO ---
     def normalize_keypoints_relative_to_torso(self, person_keypoints_xyn):
