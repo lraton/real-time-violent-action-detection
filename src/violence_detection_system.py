@@ -174,11 +174,11 @@ class ViolenceDetectionSystem:
 
                 # Salva il volto se sospetto o violento (e non già salvato)
                 if (is_suspect or is_violent):
-                        log_message = f"{time.strftime('%Y/%m/%d-%H:%M:%S')} {person_prefix} {person_id} | {status_text} {score_text} | Confidence: {person_kpts_conf.mean():.2f}" 
-                        print(log_message)
-                        self.write_log(log_message)
-                        if person_id not in self.saved_faces_ids:
-                            self.extract_suspicious_face(clean_frame, person_kpts_xy, person_box, person_id)
+                    log_message = f"{time.strftime('%Y/%m/%d-%H:%M:%S')} {person_prefix} {person_id} | {status_text} {score_text} | Confidence: {person_kpts_conf.mean():.2f}"
+                    print(log_message)
+                    self.write_log(log_message)
+                    if person_id not in self.saved_faces_ids:
+                        self.extract_suspicious_face(clean_frame, person_kpts_xy, person_box, person_id)
 
                 # Prepara i dati
                 final_label = f"{person_prefix} {person_id} | {status_text} {score_text} | Confidence: {person_kpts_conf.mean():.2f}"
@@ -249,11 +249,11 @@ class ViolenceDetectionSystem:
                 cv2.imwrite(face_filename, face_image)
                 # print(f"Volto sospetto salvato: {face_filename}")
                 self.saved_faces_ids.add(person_id)
+
     #--- SCRITTURA LOG ---
     def write_log(self, message):
         with open(f"log/log{time.strftime('_%Y%m%d')}.txt", "a") as f:
             f.write(f"{message}\n")
-
 
     #--- NORMALIZZAZIONE KEYPOINT TO TORSO ---
     def normalize_keypoints_relative_to_torso(self, person_keypoints_xyn):
@@ -274,30 +274,41 @@ class ViolenceDetectionSystem:
 
         relative_kpts_xy = self.normalize_keypoints_relative_to_torso(person_keypoints_normalized)
         keypoints_with_conf = np.hstack([relative_kpts_xy, person_kpts_conf[:, None]])
-        flattened = keypoints_with_conf.flatten()  # 17 * 3 = 51 features
+        flattened = keypoints_with_conf.flatten()  # 51 features
+
+        # Se il frame "reale" è tutto a zero non aggiungengo perchè right-padding
+        if np.all(flattened == 0):
+            pass
+        else:
+            # Frame valido, aggiungo alla sequenza
+            if person_id not in self.person_sequences:
+                self.person_sequences[person_id] = deque(maxlen=150)
+            self.person_sequences[person_id].append(flattened)
 
         if person_id not in self.person_sequences:
-            self.person_sequences[person_id] = deque(maxlen=150)
-
-        #print(f"Predicting violence for person ID: {person_id} frame {len(self.person_sequences[person_id])}")
+            return None
 
         current_sequence = self.person_sequences[person_id]
-        current_sequence.append(flattened)
 
-        # Aggiungi padding se necessario per ogni frame saltato
-        if len(current_sequence) == round(150 - (150/frame_skip)):
-            print(f"Lunghezza sequenza per persona {person_id}: {len(current_sequence)}. Aggiungo {round(150 - (150/frame_skip))} padding per frame saltati.")
-            for _ in range(round(150 - (150/frame_skip))):
-                #print("Adding padding frame for skipped frame")
-                current_sequence.append(np.zeros(51, dtype=np.float32))  # Padding se necessario
-
-        if len(current_sequence) < 150:
-            return None  # Sequenza non ancora piena
+        # Non predire se abbiamo troppi pochi frame per una stima sensata
+        if len(current_sequence) < (150 / frame_skip):  # Puoi cambiare 30 con un valore minimo
+            return None
 
         try:
-            data = np.array(current_sequence, dtype=np.float32).reshape(1, 150, 51)
-            pred = self.model_lstm.predict(data, verbose=0)[0][0]
+            # Costruisci l'input per LSTM con right-padding
+            current_data = np.array(current_sequence, dtype=np.float32)
+            current_len = len(current_data)  # Es. 80
+
+            # Creo padding
+            data_padded = np.zeros((1, 150, 51), dtype=np.float32)
+
+            # Aggiungo i dati reali a sinistra
+            data_padded[0, :current_len, :] = current_data
+            print(f"Predizione LSTM per Persona {person_id} con {current_len} frame validi e {150-current_len} di padding.")
+
+            pred = self.model_lstm.predict(data_padded, verbose=0)[0][0]
             return float(pred)
+
         except Exception as e:
             print(f"Errore predizione LSTM: {e}")
             return None
