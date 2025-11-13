@@ -63,6 +63,7 @@ python yolo_run.py
   - [X] Drawing      : 1.0 ms , Se rimuovo plot delle pose
   - [ ] Knife Detect : 28.0 ms
   - [ ] Pose Detect  : 73.5 ms
+    - [ ] Usare tensort come modello
     - [ ] Provare MoveNet Lightning
   - [ ] Logic/LSTM   : 78.0 ms
     - [ ] tf.lite.TFLiteConverter
