@@ -285,9 +285,11 @@ class ViolenceDetectionSystem:
         current_sequence.append(flattened)
 
         # Aggiungi padding se necessario per ogni frame saltato
-        for _ in range(frame_skip - 1):
-            #print("Adding padding frame for skipped frame")
-            current_sequence.append(np.zeros(51, dtype=np.float32))  # Padding se necessario
+        if len(current_sequence) == round(150 - (150/frame_skip)):
+            print(f"Lunghezza sequenza per persona {person_id}: {len(current_sequence)}. Aggiungo {round(150 - (150/frame_skip))} padding per frame saltati.")
+            for _ in range(round(150 - (150/frame_skip))):
+                #print("Adding padding frame for skipped frame")
+                current_sequence.append(np.zeros(51, dtype=np.float32))  # Padding se necessario
 
         if len(current_sequence) < 150:
             return None  # Sequenza non ancora piena
