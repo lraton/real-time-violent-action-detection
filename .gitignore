@@ -3,6 +3,8 @@ src/.venv/
 src/__pycache__/
 src/test.py
 src/convert_lstm_to_tflite.py
+src/logs/
+suspect/
 models/lstm_violence_detector.tflite
 src/test_det.py
 models/violentvideo/
