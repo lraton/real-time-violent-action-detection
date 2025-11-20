@@ -18,7 +18,9 @@ def main():
     backup_video_path = '../37.mp4'
 
     # Inizializza la classe che gestisce YOLO
-    app = ViolenceDetectionSystem(knife_model_path="../models/knife/weights/best.pt", pose_model_path="../models/yolo11n-pose.pt", lstm_model_path="../models/lstm_violence_detector_v2.keras")
+    app = ViolenceDetectionSystem(knife_model_path="../models/knife/weights/best.pt",
+                                  pose_model_path="../models/yolo11n-pose.pt",
+                                  lstm_model_path="../models/lstm_violence_detector_v2.keras")
 
     # --- Tkinter GUI ---
     root = tk.Tk()
@@ -82,6 +84,7 @@ def update_frame(root, lmain, cap, object_list, app, prev_time, fps):
     prev_time = current_time  # Salva il tempo corrente per la prossima iterazione
 
     success, frame = cap.read()
+    #fps = cap.get(cv2.CAP_PROP_FPS) # Ottieni FPS del video/camera
     if not success:
         print("Fine del video o errore nella lettura del frame.")
         # Chiudi tutto
@@ -90,7 +93,7 @@ def update_frame(root, lmain, cap, object_list, app, prev_time, fps):
         root.destroy()  # Distrugge la finestra
         return
     try:  # Processa il frame solo ogni 'frame_skip' frame
-        if counter_frames == 0:
+        if counter_frames % frame_skip == 0:
             #print('Processo nuovo frame')
             frame_drawn, all_detected_strings = app.process_frame(frame, frame_skip)
             old_frame = frame_drawn
@@ -108,7 +111,7 @@ def update_frame(root, lmain, cap, object_list, app, prev_time, fps):
 
     # Disegna gli FPS sul frame (già disegnato)
     fps_text = f"FPS: {fps:.1f}"
-    cv2.putText(frame_drawn, fps_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2, cv2.LINE_AA)
+    cv2.putText(frame_drawn, fps_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2, cv2.LINE_AA)
 
     # Ridimensiona il frame per la visualizzazione nella GUI
     display_width = 640  # Larghezza desiderata

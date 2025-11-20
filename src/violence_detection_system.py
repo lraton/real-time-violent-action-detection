@@ -3,6 +3,7 @@ import os
 import time
 import torch
 import numpy as np
+import tensorflow as tf
 from collections import deque
 from ultralytics import YOLO
 from keras.models import load_model
@@ -252,7 +253,9 @@ class ViolenceDetectionSystem:
 
     #--- SCRITTURA LOG ---
     def write_log(self, message):
-        with open(f"log/log{time.strftime('_%Y%m%d')}.txt", "a") as f:
+        os.makedirs("logs", exist_ok=True)
+
+        with open(f"logs/log{time.strftime('_%Y%m%d')}.txt", "a") as f:
             f.write(f"{message}\n")
 
     #--- NORMALIZZAZIONE KEYPOINT TO TORSO ---
@@ -297,16 +300,18 @@ class ViolenceDetectionSystem:
         try:
             # Costruisci l'input per LSTM con right-padding
             current_data = np.array(current_sequence, dtype=np.float32)
-            current_len = len(current_data)  # Es. 80
+            current_len = len(current_data) 
 
             # Creo padding
             data_padded = np.zeros((1, 150, 51), dtype=np.float32)
 
             # Aggiungo i dati reali a sinistra
             data_padded[0, :current_len, :] = current_data
-            print(f"Predizione LSTM per Persona {person_id} con {current_len} frame validi e {150-current_len} di padding.")
+            #print(f"Predizione LSTM per Persona {person_id} con {current_len} frame validi e {150-current_len} di padding.")
 
-            pred = self.model_lstm.predict(data_padded, verbose=0)[0][0]
+            input_tensor = tf.convert_to_tensor(data_padded)
+
+            pred = self.model_lstm(input_tensor, training=False)[0][0]
             return float(pred)
 
         except Exception as e:
