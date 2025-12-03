@@ -294,7 +294,7 @@ class ViolenceDetectionSystem:
         current_sequence = self.person_sequences[person_id]
 
         # Non predire se abbiamo troppi pochi frame per una stima sensata
-        if len(current_sequence) < (150 / frame_skip):  # Puoi cambiare 30 con un valore minimo
+        if len(current_sequence) < (30 / frame_skip):  # Inizio predizione dopo almeno 30 frame validi o in base a quanti richiesti (massimo 150)
             return None
 
         try:
