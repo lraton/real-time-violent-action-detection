@@ -8,4 +8,6 @@ suspect/
 models/lstm_violence_detector.tflite
 src/test_det.py
 models/violentvideo/
+models/lstm_dataset/
 video-dataset/
+OIDv4_ToolKit/

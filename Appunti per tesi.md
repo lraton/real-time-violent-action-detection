@@ -12,6 +12,7 @@
 - Datasets per l'allenamento usati
   - https://github.com/airtlab/A-Dataset-for-Automatic-Violence-Detection-in-Videos
   - https://www.kaggle.com/datasets/mohamedmustafa/real-life-violence-situations-dataset?resource=download
+  - https://www.kaggle.com/datasets/vulamnguyen/rwf2000
 
 - OpenCV per prendere la webcam
 - Tkinter per interfaccia grafica
