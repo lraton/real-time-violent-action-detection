@@ -8,8 +8,8 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 
-DATA_PATH = "../models/violentvideo/"  # cartella dove hai salvato i file .npz
-MODEL_PATH = "../models/lstm_violence_detector.keras"
+DATA_PATH = "../models/lstm_dataset/"  # cartella dove hai salvato i file .npz
+MODEL_PATH = "../models/lstm_violence_detector_V4.keras"
 MAX_FRAMES = 150
 BATCH_SIZE = 8
 EPOCHS = 100

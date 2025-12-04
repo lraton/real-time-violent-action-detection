@@ -15,11 +15,13 @@ model_pose.to(device)
 # Cartelle dei video
 video_dirs = [
     '../video-dataset/violent/cam1/',
-    '../video-dataset/violent/cam2/'
+    '../video-dataset/violent/cam2/',
     '../video-dataset/violent/cam3/',
+    '../video-dataset/violent/cam4/',
     '../video-dataset/non-violent/cam1/',
     '../video-dataset/non-violent/cam2/',
-    '../video-dataset/non-violent/cam3/'
+    '../video-dataset/non-violent/cam3/',
+    '../video-dataset/non-violent/cam4/'
 ]
 
 # INDICI DEI KEYPOINT NEL FORMATO COCO (17 KEYPOINTS)
@@ -40,8 +42,10 @@ def process_video_folder(path_to_video):
         cam_label = 'cam1'
     elif 'cam2' in path_to_video:
         cam_label = 'cam2'
-    else:
+    elif 'cam3' in path_to_video:
         cam_label = 'cam3'
+    else:
+        cam_label = 'cam4'
 
     for filename in natsorted(os.listdir(path_to_video)):
         if not filename.lower().endswith(('.mp4', '.avi', '.mov')):
