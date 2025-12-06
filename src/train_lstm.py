@@ -7,6 +7,7 @@ from tensorflow.keras.layers import LSTM, Dense, Dropout, Masking
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
+from sklearn.metrics import classification_report
 
 DATA_PATH = "../models/lstm_dataset/"  # cartella dove hai salvato i file .npz
 MODEL_PATH = "../models/lstm_violence_detector_V4.keras"
@@ -43,9 +44,20 @@ def normalize_keypoints(X, y):  # Normalizza le sequenze di keypoints
 
 
 def create_and_train_model(X, y):
-    # Suddivisione in training e validation set
-    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
-    print(f"Dati training: {X_train.shape}, validation: {X_val.shape}")
+    #Separiamo il TEST SET (15% del totale)
+    X_temp, X_test, y_temp, y_test = train_test_split(
+        X, y, test_size=0.15, stratify=y, random_state=42
+    )
+
+    # Separiamo TRAINING e VALIDATION dai dati rimanenti (20% del rimanente)
+    X_train, X_val, y_train, y_val = train_test_split(
+        X_temp, y_temp, test_size=0.2, stratify=y_temp, random_state=42
+    )
+
+    print(f"Dataset Split:")
+    print(f" - Train: {X_train.shape} (si usa per imparare)")
+    print(f" - Val:   {X_val.shape}   (si usa per EarlyStopping)")
+    print(f" - Test:  {X_test.shape}  (si usa SOLO alla fine)")
 
     # Creazione del modello LSTM
     print("Creazione modello LSTM...")
@@ -68,6 +80,19 @@ def create_and_train_model(X, y):
     print("Avvio dell'addestramento...")
     model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=EPOCHS, batch_size=BATCH_SIZE, callbacks=[checkpoint, earlystop], verbose=1)
 
+    # --- VALUTAZIONE FINALE ---
+    print("\n--- Valutazione Finale sul Test Set ---")
+    # Carichiamo i pesi migliori salvati dal Checkpoint per essere sicuri
+    model.load_weights(MODEL_PATH) 
+    
+    loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
+    print(f"Test Loss: {loss:.4f}")
+    print(f"Test Accuracy: {accuracy*100:.2f}%")
+    
+    # Matrice di confusione sul Test Set
+    y_pred = (model.predict(X_test) > 0.5).astype("int32")
+    print("\nClassification Report:")
+    print(classification_report(y_test, y_pred))
 
 if __name__ == '__main__':
     main()

@@ -275,18 +275,18 @@ class ViolenceDetectionSystem:
     # --- PREDIZIONE VIOLENZA ---
     def predict_violence(self, person_keypoints_normalized, person_kpts_conf, frame_skip, person_id):
 
+        if np.sum(person_kpts_conf) == 0 or np.all(person_keypoints_normalized == 0):
+            return None
+
+        #Solo se i lfram è valido
         relative_kpts_xy = self.normalize_keypoints_relative_to_torso(person_keypoints_normalized)
         keypoints_with_conf = np.hstack([relative_kpts_xy, person_kpts_conf[:, None]])
         flattened = keypoints_with_conf.flatten()  # 51 features
 
-        # Se il frame "reale" è tutto a zero non aggiungengo perchè right-padding
-        if np.all(flattened == 0):
-            pass
-        else:
-            # Frame valido, aggiungo alla sequenza
-            if person_id not in self.person_sequences:
-                self.person_sequences[person_id] = deque(maxlen=150)
-            self.person_sequences[person_id].append(flattened)
+        # Frame valido, aggiungo alla sequenza
+        if person_id not in self.person_sequences:
+            self.person_sequences[person_id] = deque(maxlen=150)
+        self.person_sequences[person_id].append(flattened)
 
         if person_id not in self.person_sequences:
             return None
@@ -300,7 +300,7 @@ class ViolenceDetectionSystem:
         try:
             # Costruisci l'input per LSTM con right-padding
             current_data = np.array(current_sequence, dtype=np.float32)
-            current_len = len(current_data) 
+            current_len = len(current_data)
 
             # Creo padding
             data_padded = np.zeros((1, 150, 51), dtype=np.float32)
