@@ -15,12 +15,12 @@ def main():
     prev_time = 0  # Tempo del frame precedente
     fps = 0  # Valore FPS calcolato
     camera_index = 0  # Modifica questo indice se necessario (spesso 0 o 1)
-    backup_video_path = '../37.mp4'
+    backup_video_path = '../test1.mp4'
 
     # Inizializza la classe che gestisce YOLO
     app = ViolenceDetectionSystem(knife_model_path="../models/knife/run2/weights/best.pt",
                                   pose_model_path="../models/yolo11n-pose.pt",
-                                  lstm_model_path="../models/lstm_violence_detector_v4.keras")
+                                  lstm_model_path="../models/lstm_violence_detector_v6.keras")
 
     # --- Tkinter GUI ---
     root = tk.Tk()
@@ -100,8 +100,8 @@ def update_frame(root, lmain, cap, object_list, app, prev_time, fps):
             old_all_detected_strings = all_detected_strings
         else:  # Usa l'ultimo frame processato
             #print('Uso frame vecchio')
-            frame_drawn = frame  #usa il frame originale per evitare scatti ma senza disegni
-            #frame_drawn = old_frame if old_frame is not None else frame  # Usa l'ultimo frame processato se disponibile ma piu scattoso
+            #frame_drawn = frame  #usa il frame originale per evitare scatti ma senza disegni
+            frame_drawn = old_frame if old_frame is not None else frame  # Usa l'ultimo frame processato se disponibile ma piu scattoso
             all_detected_strings = old_all_detected_strings if old_all_detected_strings else ["Nessun oggetto rilevato"]
     except Exception as e:
         print(f"Errore durante process_frame: {e}")

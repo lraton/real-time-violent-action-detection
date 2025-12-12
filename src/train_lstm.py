@@ -10,7 +10,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 from sklearn.metrics import classification_report
 
 DATA_PATH = "../models/lstm_dataset/"  # cartella dove hai salvato i file .npz
-MODEL_PATH = "../models/lstm_violence_detector_V4.keras"
+MODEL_PATH = "../models/lstm_violence_detector_v6.keras"
 MAX_FRAMES = 150
 BATCH_SIZE = 8
 EPOCHS = 100
@@ -24,7 +24,7 @@ def main():
         data = np.load(file)
         X.append(data["data"])  # sequenza di keypoints
         y.append(int(data["label"]))  # violent=1, non-violent=0
-        print(f"Caricato {os.path.basename(file)}")
+        #print(f"Caricato {os.path.basename(file)}")
 
     print(f"Totale sequenze: {len(X)}")
 
