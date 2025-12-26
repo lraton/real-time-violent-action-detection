@@ -1,5 +1,5 @@
 import pandas as pd
-import matplotlib.pyplot as plt
+import matplotlib.pyplot  as plt
 import numpy as np
 import seaborn as sns
 from sklearn.metrics import (classification_report, confusion_matrix, ConfusionMatrixDisplay, roc_auc_score, average_precision_score)
@@ -64,7 +64,7 @@ def main():
     plt.ylabel('Reale (Ground Truth)')
     plt.xlabel('Predetto dal Sistema')
     plt.tight_layout()
-    plt.show()
+    plt.savefig('confusion_matrix.png', bbox_inches='tight')
 
     # ----- Metriche Avanzate (AUC) - Binario: Safe vs Danger -----
 
@@ -137,7 +137,8 @@ def main():
         print(">> BUONO: Qualche sfarfallio, ma accettabile.")
     else:
         print(">> ATTENZIONE: Il sistema è instabile (cambia idea troppo spesso).")
-
+    
+    plt.show()
 
 if __name__ == "__main__":
     main()

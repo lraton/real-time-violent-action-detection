@@ -52,7 +52,7 @@ class ViolenceDetectionSystem:
 
         # Prende le pose e traccia le persone
         t_pose_start = time.time()
-        results_pose = self.model_pose.track(frame, tracker="botsort.yaml", persist=True, verbose=False, imgsz=256, half=True, conf=0.6)
+        results_pose = self.model_pose.track(frame, tracker="botsort.yaml", persist=True, verbose=False, imgsz=256, half=True)
         t_pose = (time.time() - t_pose_start) * 1000  # in ms
 
         # Processa i risultati delle pose
@@ -61,16 +61,14 @@ class ViolenceDetectionSystem:
         t_logic = (time.time() - t_logic_start) * 1000  # in ms
 
         # Disegna box persone
+        # Disegna box persone per tutte le persone
         t_draw_start = time.time()
-        if results_pose and results_pose[0]:
-            frame_drawn = frame.copy()
-            result = results_pose[0]
-            x1, y1, x2, y2 = map(int, result.boxes.xyxy[0])
-            for data in person_data:
-                cv2.rectangle(frame_drawn, (x1, y1), (x2, y2), data["color"], 2)
-        else:
-            frame_drawn = frame
+        frame_drawn = frame.copy()
+        for data in person_data:
+            x1, y1, x2, y2 = data["box"]
+            cv2.rectangle(frame_drawn, (x1, y1), (x2, y2), data["color"], 2)
         t_draw = (time.time() - t_draw_start) * 1000  # in ms
+
 
         # Disegna oggetti e etichette persone
         frame_drawn = self.draw_detections(frame_drawn, detected_items, person_data)
@@ -187,7 +185,12 @@ class ViolenceDetectionSystem:
                 text_position = (x1, max(y2 - 10, 20))
 
                 person_strings_for_list.add(final_label)
-                person_data_for_drawing.append({"label": final_label, "pos": text_position, "color": box_color})
+                person_data_for_drawing.append({
+                    "label": final_label,
+                    "pos": text_position,
+                    "color": box_color,
+                    "box": (x1, y1, x2, y2)  # aggiungi le coordinate del box
+                })
 
         return person_data_for_drawing, person_strings_for_list
 

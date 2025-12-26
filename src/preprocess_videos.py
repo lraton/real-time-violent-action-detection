@@ -14,14 +14,14 @@ model_pose.to(device)
 
 # Cartelle dei video
 video_dirs = [
-    #'../video-dataset/violent/cam1/',
-    #'../video-dataset/violent/cam2/',
-    #'../video-dataset/violent/cam3/',
-    #'../video-dataset/violent/cam4/',
-    #'../video-dataset/non-violent/cam1/',
-    #'../video-dataset/non-violent/cam2/',
-    #'../video-dataset/non-violent/cam3/',
-    #'../video-dataset/non-violent/cam4/',
+    '../video-dataset/violent/cam1/',
+    '../video-dataset/violent/cam2/',
+    '../video-dataset/violent/cam3/',
+    '../video-dataset/violent/cam4/',
+    '../video-dataset/non-violent/cam1/',
+    '../video-dataset/non-violent/cam2/',
+    '../video-dataset/non-violent/cam3/',
+    '../video-dataset/non-violent/cam4/',
     '../video-dataset/non-violent/cam5/'
 ]
 
