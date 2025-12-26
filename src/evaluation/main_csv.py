@@ -1,22 +1,17 @@
 import cv2
 import os
-from violence_detection_system import ViolenceDetectionSystem
+from violence_detection_system_csv import ViolenceDetectionSystem
 
-VIDEOS_DIR = "../dataset/videos"
+VIDEOS_DIR = "dataset_eval/"
 FRAME_SKIP = 2
 
-CLASS_MAP = {
-    "safe": 0,
-    "violence": 1,
-    "weapon": 2
-}
+CLASS_MAP = {"safe": 0, "violence": 1, "weapon": 2}
+
 
 def evaluate():
-    app = ViolenceDetectionSystem(
-        knife_model_path="../models/knife/run2/weights/best.pt",
-        pose_model_path="../models/yolo11n-pose.pt",
-        lstm_model_path="../models/lstm_violence_detector_v6.keras"
-    )
+    app = ViolenceDetectionSystem(knife_model_path="../../models/knife/run2/weights/best.pt",
+                                  pose_model_path="../../models/yolo11n-pose.pt",
+                                  lstm_model_path="../../models/lstm_violence_detector_v6.keras")
 
     for category, true_class in CLASS_MAP.items():
         category_path = os.path.join(VIDEOS_DIR, category)
@@ -45,6 +40,7 @@ def evaluate():
             cap.release()
 
     print("Evaluation completed.")
+
 
 if __name__ == "__main__":
     evaluate()

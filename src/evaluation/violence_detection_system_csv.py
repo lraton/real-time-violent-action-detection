@@ -45,7 +45,7 @@ class ViolenceDetectionSystem:
         self.last_video_id = None
 
         # --- Initialize CSV Header ---
-        self.csv_filename = "evaluation/predictions.csv"
+        self.csv_filename = "predictions.csv"
         # Check if file exists to avoid overwriting headers or if it needs creation
         if not os.path.exists(self.csv_filename):
             with open(self.csv_filename, "w", newline="") as f:
@@ -203,12 +203,12 @@ class ViolenceDetectionSystem:
                     box_color = self.COLOR_VIOLENT  # Se è sospetto, colora di rosso
 
                 # Salva il volto se sospetto o violento (e non già salvato)
-                if (is_suspect or is_violent):
-                    log_message = f"{time.strftime('%Y/%m/%d-%H:%M:%S')} {person_prefix} {person_id} | {status_text} {score_text} | Confidence: {person_kpts_conf.mean():.2f}"
-                    print(log_message)
-                    self.write_log(log_message)
-                    if person_id not in self.saved_faces_ids:
-                        self.extract_suspicious_face(clean_frame, person_kpts_xy, person_box, person_id)
+                #if (is_suspect or is_violent):
+                #    log_message = f"{time.strftime('%Y/%m/%d-%H:%M:%S')} {person_prefix} {person_id} | {status_text} {score_text} | Confidence: {person_kpts_conf.mean():.2f}"
+                #    print(log_message)
+                #    self.write_log(log_message)
+                #    if person_id not in self.saved_faces_ids:
+                #        self.extract_suspicious_face(clean_frame, person_kpts_xy, person_box, person_id)
 
                 # Prepara i dati
                 final_label = f"{person_prefix} {person_id} | {status_text} {score_text} | Confidence: {person_kpts_conf.mean():.2f}"
@@ -274,17 +274,17 @@ class ViolenceDetectionSystem:
         if x1 < x2 and y1 < y2:
             face_image = frame[y1:y2, x1:x2]
             if face_image.size > 0:
-                os.makedirs("../suspect/", exist_ok=True)
-                face_filename = f"../suspect/face_susp_{person_id}_{time.strftime('%Y%m%d_%H%M%S')}.jpg"
+                os.makedirs("pred_suspect/", exist_ok=True)
+                face_filename = f"pred_suspect/face_susp_{person_id}_{time.strftime('%Y%m%d_%H%M%S')}.jpg"
                 cv2.imwrite(face_filename, face_image)
                 # print(f"Volto sospetto salvato: {face_filename}")
                 self.saved_faces_ids.add(person_id)
 
     #--- SCRITTURA LOG ---
     def write_log(self, message):
-        os.makedirs("logs", exist_ok=True)
+        os.makedirs("pred_logs", exist_ok=True)
 
-        with open(f"logs/log{time.strftime('_%Y%m%d')}.txt", "a") as f:
+        with open(f"pred_logs/log{time.strftime('_%Y%m%d')}.txt", "a") as f:
             f.write(f"{message}\n")
 
     #--- SALVATAGGIO RECORD CSV ---

@@ -6,7 +6,7 @@ from sklearn.metrics import (classification_report, confusion_matrix, ConfusionM
 
 
 def main():
-    # 1. Caricamento Dati
+    # ----- Caricamento Dati -----
     filename = "predictions.csv"  # O "evaluation/predictions.csv"
     try:
         df = pd.read_csv(filename)
@@ -32,9 +32,8 @@ def main():
 
     class_names = ["Non violento", "Aggressione", "Accoltellamento"]
 
-    # ---------------------------------------------------------
-    # 2. Creazione "Score Unificato" per le curve AUC
-    # ---------------------------------------------------------
+    # ----- Creazione "Score Unificato" per le curve AUC -----
+
     # Il problema: "violence_score" misura solo la violenza fisica (LSTM).
     # Se c'è un coltello (has_knife=1), la situazione è grave (1.0) anche se l'LSTM dice 0.1.
     # Creiamo uno score che combina le due cose per valutare la "Pericolosità totale".
@@ -42,16 +41,20 @@ def main():
     df["unified_score"] = df.apply(lambda row: 1.0 if row["has_knife"] == 1 else row["violence_score"], axis=1)
     y_score = df["unified_score"]
 
-    # ---------------------------------------------------------
-    # 3. Report Testuale (Precision, Recall, F1)
-    # ---------------------------------------------------------
+    # ----- Report Testuale (Precision, Recall, F1) -----
+
     print("\n" + "=" * 40)
     print("=== CLASSIFICATION REPORT ===")
-    print(classification_report(y_true, y_pred, target_names=class_names, digits=3, zero_division=0))
+    labels = sorted(np.unique(y_true))
 
-    # ---------------------------------------------------------
-    # 4. Matrice di Confusione
-    # ---------------------------------------------------------
+    name_map = {0: "Non violento", 1: "Aggressione", 2: "Accoltellamento"}
+
+    class_names = [name_map[l] for l in labels]
+
+    print(classification_report(y_true, y_pred, labels=labels, target_names=class_names, digits=3, zero_division=0))
+
+    # ----- Matrice di Confusione -----
+
     cm = confusion_matrix(y_true, y_pred)
 
     # Plotting più elegante con Seaborn
@@ -63,9 +66,8 @@ def main():
     plt.tight_layout()
     plt.show()
 
-    # ---------------------------------------------------------
-    # 5. Metriche Avanzate (AUC) - Binario: Safe vs Danger
-    # ---------------------------------------------------------
+    # ----- Metriche Avanzate (AUC) - Binario: Safe vs Danger -----
+
     # Raggruppiamo Aggressione(1) e Accoltellamento(2) in "Pericolo"(1)
     y_true_bin = (y_true > 0).astype(int)
 
@@ -89,7 +91,7 @@ def main():
     else:
         print("\nAttenzione: Impossibile calcolare AUC. Il CSV contiene solo una classe (tutti violenti o tutti calmi).")
 
-    # --- FLICKER RATE ---
+    # ----- FLICKER RATE -----
     def calculate_flicker_rate(df):
         flicker_scores = []
 
@@ -128,7 +130,7 @@ def main():
     print(f"AVERAGE FLICKER RATE: {avg_flicker:.4f}")
     print("=" * 40)
 
-    # --- INTERPRETAZIONE ---
+    # ----- INTERPRETAZIONE -----
     if avg_flicker < 0.02:
         print(">> ECCELLENTE: Il sistema è molto stabile.")
     elif avg_flicker < 0.05:
