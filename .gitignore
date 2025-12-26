@@ -12,7 +12,5 @@ models/lstm_dataset/
 video-dataset/
 OIDv4_ToolKit/
 models/temp/
-src/evaluation/pred_suspect/
-src/evaluation/pred_logs/
-src/evaluation/dataset_eval
+datasets/coco8-pose/
 src/evaluation/__pycache__
