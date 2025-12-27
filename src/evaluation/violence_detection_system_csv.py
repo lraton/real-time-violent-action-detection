@@ -77,28 +77,13 @@ class ViolenceDetectionSystem:
 
         # Prende le pose e traccia le persone
         t_pose_start = time.time()
-        results_pose = self.model_pose.track(frame, tracker="botsort.yaml", persist=True, verbose=False, imgsz=256, half=True, conf=0.6)
+        results_pose = self.model_pose.track(frame, tracker="botsort.yaml", persist=True, verbose=False, imgsz=256, half=True)
         t_pose = (time.time() - t_pose_start) * 1000  # in ms
 
         # Processa i risultati delle pose
         t_logic_start = time.time()
         person_data, person_strings_for_list = self.detect_pose(results_pose, detected_items, clean_frame_for_save, frame_skip, current_video_id, true_class)
         t_logic = (time.time() - t_logic_start) * 1000  # in ms
-
-        # Disegna box persone
-        t_draw_start = time.time()
-        if results_pose and results_pose[0]:
-            frame_drawn = frame.copy()
-            result = results_pose[0]
-            x1, y1, x2, y2 = map(int, result.boxes.xyxy[0])
-            for data in person_data:
-                cv2.rectangle(frame_drawn, (x1, y1), (x2, y2), data["color"], 2)
-        else:
-            frame_drawn = frame
-        t_draw = (time.time() - t_draw_start) * 1000  # in ms
-
-        # Disegna oggetti e etichette persone
-        frame_drawn = self.draw_detections(frame_drawn, detected_items, person_data)
 
         # Prepara la lista di stringhe per la GUI
         object_strings = {f"{obj['class']} {obj['conf']:.2f}" for obj in detected_items}
@@ -112,19 +97,18 @@ class ViolenceDetectionSystem:
         print(f"  1. Knife Detect : {t_obj:.1f} ms")
         print(f"  2. Pose Detect  : {t_pose:.1f} ms")
         print(f"  3. Logic/LSTM   : {t_logic:.1f} ms")
-        print(f"  4. Drawing      : {t_draw:.1f} ms")
         print(f"  --------------------------")
         print(f"  TOTALE FRAME  : {t_total:.1f} ms  (Target: {1000/t_total:.1f} FPS)")
         print("\n")  # Aggiungi uno spazio
         '''
 
-        return frame_drawn, all_detected_strings
+        return frame, all_detected_strings
 
     # --- RILEVAMENTO OGGETTI ---
     def detect_objects(self, frame):
         detected = []
 
-        results_det = self.model_knife(frame, verbose=False, imgsz=256, half=True, conf=0.6)  # Rileva oggetti (coltelli)
+        results_det = self.model_knife(frame, verbose=False, imgsz=256, half=True, conf=0.4)  # Rileva oggetti (coltelli)
 
         for result in results_det:
             class_names = result.names
