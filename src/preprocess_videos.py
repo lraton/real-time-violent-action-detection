@@ -17,7 +17,7 @@ video_dirs = [
     '../video-dataset/violent/cam1/',
     '../video-dataset/violent/cam2/',
     '../video-dataset/violent/cam3/',
-    '../video-dataset/violent/cam4/',
+    #'../video-dataset/violent/cam4/',
     '../video-dataset/non-violent/cam1/',
     '../video-dataset/non-violent/cam2/',
     '../video-dataset/non-violent/cam3/',
@@ -135,7 +135,7 @@ def normalize_keypoints_relative_to_torso(i, keypoints_normalized):
 
 #   Salva i keypoint normalizzati nel dataset
 def save_keypoints_to_dataset(people_data, filename, label, cam_label, default_label=0):
-    save_path = '../models/lstm_dataset/'
+    save_path = '../datasets/lstm_dataset/'
     os.makedirs(save_path, exist_ok=True)
 
     for pid, frames in people_data.items():

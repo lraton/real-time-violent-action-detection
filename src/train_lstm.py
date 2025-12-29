@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 from sklearn.metrics import classification_report
 
-DATA_PATH = "../models/lstm_dataset/"  # cartella dove hai salvato i file .npz
+DATA_PATH = "../datasets/lstm_dataset/"  # cartella dove hai salvato i file .npz
 MODEL_PATH = "../models/lstm_violence_detector_v7.keras"
 MAX_FRAMES = 150
 BATCH_SIZE = 8
