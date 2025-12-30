@@ -11,7 +11,7 @@ CLASS_MAP = {"safe": 0, "violence": 1, "weapon": 2}
 def evaluate():
     app = ViolenceDetectionSystem(knife_model_path="../../models/knife/run2/weights/best.pt",
                                   pose_model_path="../../models/yolo11n-pose.pt",
-                                  lstm_model_path="../../models/lstm_violence_detector_v6.keras")
+                                  lstm_model_path="../../models/lstm_violence_detector_v7.keras")
 
     for category, true_class in CLASS_MAP.items():
         category_path = os.path.join(VIDEOS_DIR, category)

@@ -17,7 +17,7 @@ video_dirs = [
     '../video-dataset/violent/cam1/',
     '../video-dataset/violent/cam2/',
     '../video-dataset/violent/cam3/',
-    #'../video-dataset/violent/cam4/',
+    '../video-dataset/violent/cam4/',
     '../video-dataset/non-violent/cam1/',
     '../video-dataset/non-violent/cam2/',
     '../video-dataset/non-violent/cam3/',
@@ -90,51 +90,105 @@ def process_video_folder(path_to_video):
                         break
                 '''
         cv2.destroyAllWindows()
-
         if default_label == 1:
-            '''
-                violent_ids = input(f"Inserisci gli id violenti separati da spazio {list(people_data.keys())}: ").split()
-                violent_ids = [int(x) for x in violent_ids]
+            # --- VIDEO VIOLENTI (Filtraggio Intelligente) ---
+            print(f"Analisi video violento: {filename}...")
 
-                for pid, frames in people_data.items():
-                    if len(frames) == 0:
-                        continue  # salta persone senza frame
+            violent_people = {}  # Chi combatte (Label 1)
+            static_people = {}   # Chi guarda (Label 0 - Ottimo per ridurre falsi positivi!)
 
-                    # assegna label 1 se è stato selezionato come violento, altrimenti 0
-                    label = 1 if pid in violent_ids else 0
+            for pid, frames in people_data.items():
+                # Filtro Lunghezza (butta via rumore)
+                if len(frames) < 30:
+                    continue
 
-                    # salva i keypoint di questa persona
-                    temp_dict = {pid: frames}
-                    save_keypoints_to_dataset(temp_dict, filename, label, cam_label, default_label)
-                    '''
-            # Salva i keypoint di tutte le persone con label 1
-            save_keypoints_to_dataset(people_data, filename, default_label, cam_label, default_label)
+                # Calcolo Score Movimento
+                score = calculate_movement_score(frames)
+
+                # Uno spettatore o un combattente?
+                if score < 1.5:
+                    print(f"  -> ID {pid} classificato STATICO (score {score:.4f})")
+                    static_people[pid] = frames
+                else:
+                    print(f"  -> ID {pid} classificato VIOLENTO (score {score:.4f})")
+                    violent_people[pid] = frames
+
+            # --- SALVATAGGIO DEI DUE GRUPPI ---
+            
+            # Salva i VIOLENTI (Label 1)
+            if len(violent_people) > 0:
+                save_keypoints_to_dataset(violent_people, filename, cam_label, default_label)
+
+            # Salva gli SPETTATORI (Label 0)
+            if len(static_people) > 0:
+                save_keypoints_to_dataset(static_people, filename, cam_label, 0)
+
         else:
-            # Salva i keypoint di tutte le persone con label 0
-            save_keypoints_to_dataset(people_data, filename, default_label, cam_label)
+            # --- VIDEO NON VIOLENTI  ---
+            cleaned_people_data = {pid: fr for pid, fr in people_data.items() if len(fr) > 15}
+            if len(cleaned_people_data) > 0:
+                save_keypoints_to_dataset(cleaned_people_data, filename, cam_label, default_label)
 
         print(f"People data collected so far: {len(people_data)} individuals.")
 
 
+def calculate_movement_score(frames):
+    # Converti in numpy array se non lo è
+    data = np.array(frames)
+
+    # Prendiamo solo le prime 2 colonne (X, Y relativi)
+    # Assumiamo che la forma sia (frames, 17, 3) dove 3 è (x, y, conf)
+    coords = data[:, :, :2]
+
+    # Calcola la differenza (velocità) tra frame consecutivi
+    # diffs sarà (N-1, 17, 2)
+    diffs = np.diff(coords, axis=0)
+
+    # Calcola la magnitudine del movimento per ogni keypoint (distanza euclidea)
+    # magnitudes sarà (N-1, 17)
+    magnitudes = np.linalg.norm(diffs, axis=2)
+
+    # Somma il movimento di tutti i keypoint per ogni frame, poi fai la media temporale
+    # Questo ci dà un numero unico: "quanto si muove mediamente questo scheletro per frame"
+    avg_movement = np.mean(np.sum(magnitudes, axis=1))
+
+    return avg_movement
+
+
 # Funzione per normalizzare i keypoint rispetto al centro del torace
 def normalize_keypoints_relative_to_torso(i, keypoints_normalized):
-    person_keypoints_xyn = keypoints_normalized[i]
+    person_keypoints = keypoints_normalized[i] # Shape (17, 2)
 
-    left_shoulder = person_keypoints_xyn[LEFT_SHOULDER_IDX]
-    right_shoulder = person_keypoints_xyn[RIGHT_SHOULDER_IDX]
+    left_shoulder = person_keypoints[LEFT_SHOULDER_IDX]
+    right_shoulder = person_keypoints[RIGHT_SHOULDER_IDX]
 
-    if left_shoulder.sum() > 0 and right_shoulder.sum() > 0:
+    # Verifica se le spalle sono state rilevate (conf > 0 o coord != 0)
+    # YOLO normalizzato a volte mette 0,0 quando non rileva
+    if left_shoulder[0] != 0 and right_shoulder[0] != 0:
+        
+        # Trova il centro del torso
         center_point = (left_shoulder + right_shoulder) / 2
-    else:
-        center_point = np.array([0.0, 0.0])
 
-    relative_keypoints = person_keypoints_xyn - center_point
+        # Calcola la larghezza (Fattore di scala)
+        shoulder_width = np.linalg.norm(left_shoulder - right_shoulder)
+        
+        # Protezione matematica: se per assurdo la larghezza è 0 (punti sovrapposti)
+        if shoulder_width < 0.01: 
+            shoulder_width = 1.0 # Evita esplosione dei numeri
+
+        # Normalizzazione completa (Centratura + Scala)
+        relative_keypoints = (person_keypoints - center_point) / shoulder_width
+
+    else:
+        # FALLBACK: Se non vede le spalle, i dati sono probabilmente sporchi.
+        center_point = np.array([0.5, 0.5]) 
+        relative_keypoints = person_keypoints - center_point
 
     return relative_keypoints
 
 
 #   Salva i keypoint normalizzati nel dataset
-def save_keypoints_to_dataset(people_data, filename, label, cam_label, default_label=0):
+def save_keypoints_to_dataset(people_data, filename, cam_label, default_label=0):
     save_path = '../datasets/lstm_dataset/'
     os.makedirs(save_path, exist_ok=True)
 
@@ -146,10 +200,10 @@ def save_keypoints_to_dataset(people_data, filename, label, cam_label, default_l
         video_name = os.path.splitext(os.path.basename(filename))[0]
 
         if default_label == 1:
-            np.savez(f"{save_path}violent_video{video_name}_{cam_label}_person{pid}", data=person_array, label=label)
+            np.savez(f"{save_path}violent_video{video_name}_{cam_label}_person{pid}", data=person_array, label=default_label)
             print(f"Salvo video violento: {video_name}, {cam_label}, persona ID: {pid}, frames: {person_array.shape[0]}")
         else:
-            np.savez(f"{save_path}nonviolent_video{video_name}_{cam_label}_person{pid}", data=person_array, label=label)
+            np.savez(f"{save_path}nonviolent_video{video_name}_{cam_label}_person{pid}", data=person_array, label=default_label)
             print(f"Salvo video non-violento: {video_name}, {cam_label}, persona ID: {pid}, frames: {person_array.shape[0]}")
 
 

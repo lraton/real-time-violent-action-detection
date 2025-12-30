@@ -57,7 +57,7 @@ def main():
 
     cm = confusion_matrix(y_true, y_pred)
 
-    # Plotting più elegante con Seaborn
+    # Plotting 
     plt.figure(figsize=(8, 6))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=class_names, yticklabels=class_names)
     plt.title('Confusion Matrix')
@@ -81,7 +81,7 @@ def main():
         print(f"ROC-AUC Score : {roc_auc:.4f} (Capacità di discriminazione generale)")
         print(f"PR-AUC Score  : {pr_auc:.4f} (Cruciale per dataset sbilanciati)")
 
-        # Interpretazione veloce per te
+        # Interpretazione veloce
         if pr_auc > 0.8:
             print(">> Risultato: ECCELLENTE. Il sistema è molto affidabile.")
         elif pr_auc > 0.5:

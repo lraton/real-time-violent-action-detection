@@ -21,6 +21,10 @@ class ViolenceDetectionSystem:
     FONT_SCALE = 0.6
     FONT_THICKNESS = 2
 
+    # Parametri Training
+    MASK_VALUE = -1.0
+    MAX_FRAMES = 150
+
     # Scheletro
     SKELETON = [(5, 6), (5, 7), (7, 9), (6, 8), (8, 10), (11, 12), (5, 11), (6, 12), (11, 13), (13, 15), (12, 14), (14, 16)]
 
@@ -301,7 +305,6 @@ class ViolenceDetectionSystem:
                 writer.writerow(prediction_record)
         except Exception as e:
             print(f"Error writing to CSV: {e}")
-        # -------------------------
 
     #--- NORMALIZZAZIONE KEYPOINT TO TORSO ---
     def normalize_keypoints_relative_to_torso(self, person_keypoints_xyn):
@@ -310,12 +313,31 @@ class ViolenceDetectionSystem:
 
         if left_shoulder.sum() > 0 and right_shoulder.sum() > 0:
             center_point = (left_shoulder + right_shoulder) / 2.0
-        else:
-            # Fallback se le spalle non sono visibili
-            center_point = np.array([0.5, 0.5])
 
-        relative_keypoints = person_keypoints_xyn - center_point
+            # Calcolo larghezza spalle (Scale Invariance)
+            shoulder_width = np.linalg.norm(left_shoulder - right_shoulder)
+            if shoulder_width < 0.01: shoulder_width = 1.0  # Evita divisioni per zero o valori troppo piccoli
+
+            # Normalizzazione con scala
+            relative_keypoints = (person_keypoints_xyn - center_point) / shoulder_width
+        else:
+            # Fallback
+            center_point = np.array([0.5, 0.5])
+            relative_keypoints = person_keypoints_xyn - center_point
+
         return relative_keypoints
+
+    # --- FILTRO MOVIMENTO  ---
+    def calculate_movement_score_inference(self, sequence):
+        # Sequence è una deque di arrays appiattiti (51 features)
+        # Ricostruiamo la forma (N, 17, 3) -> prendiamo solo le prime 2 col (x,y)
+        data = np.array(sequence)
+        coords = data.reshape(len(data), 17, 3)[:, :, :2]
+
+        diffs = np.diff(coords, axis=0)
+        magnitudes = np.linalg.norm(diffs, axis=2)
+        avg_movement = np.mean(np.sum(magnitudes, axis=1))
+        return avg_movement
 
     # --- PREDIZIONE VIOLENZA ---
     def predict_violence(self, person_keypoints_normalized, person_kpts_conf, frame_skip, person_id):
@@ -343,12 +365,17 @@ class ViolenceDetectionSystem:
             return None
 
         try:
+            # Filtro movimento (disabilitato per ora)
+            # movement_score = self.calculate_movement_score_inference(current_sequence)
+            # if movement_score < 0.05:
+            #     return 0.05  # Ritorna un valore basso sicuro
+
             # Costruisci l'input per LSTM con right-padding
             current_data = np.array(current_sequence, dtype=np.float32)
             current_len = len(current_data)
 
             # Creo padding
-            data_padded = np.zeros((1, 150, 51), dtype=np.float32)
+            data_padded = np.full((1, self.MAX_FRAMES, 51), self.MASK_VALUE, dtype=np.float32)
 
             # Aggiungo i dati reali a sinistra
             data_padded[0, :current_len, :] = current_data
