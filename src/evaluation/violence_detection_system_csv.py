@@ -49,7 +49,7 @@ class ViolenceDetectionSystem:
         self.last_video_id = None
 
         # --- Initialize CSV Header ---
-        self.csv_filename = "predictions.csv"
+        self.csv_filename = "/evaluation_results/predictions_v8.csv"
         # Check if file exists to avoid overwriting headers or if it needs creation
         if not os.path.exists(self.csv_filename):
             with open(self.csv_filename, "w", newline="") as f:
