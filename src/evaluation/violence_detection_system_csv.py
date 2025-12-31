@@ -22,7 +22,7 @@ class ViolenceDetectionSystem:
     FONT_THICKNESS = 2
 
     # Parametri Training
-    MASK_VALUE = -1.0
+    MASK_VALUE = -999.0
     MAX_FRAMES = 150
 
     # Scheletro

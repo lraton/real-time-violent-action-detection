@@ -21,7 +21,7 @@ class ViolenceDetectionSystem:
     FONT_THICKNESS = 2
 
     # Parametri Training
-    MASK_VALUE = -1.0
+    MASK_VALUE = -999.0
     MAX_FRAMES = 150
 
     # Scheletro
@@ -288,7 +288,6 @@ class ViolenceDetectionSystem:
     # --- FILTRO MOVIMENTO  ---
     def calculate_movement_score_inference(self, sequence):
         # Sequence è una deque di arrays appiattiti (51 features)
-        # Ricostruiamo la forma (N, 17, 3) -> prendiamo solo le prime 2 col (x,y)
         data = np.array(sequence)
         coords = data.reshape(len(data), 17, 3)[:, :, :2]
 
@@ -303,7 +302,7 @@ class ViolenceDetectionSystem:
         if np.sum(person_kpts_conf) == 0 or np.all(person_keypoints_normalized == 0):
             return None
 
-        #Solo se i lfram è valido
+        #Solo se il frame è valido
         relative_kpts_xy = self.normalize_keypoints_relative_to_torso(person_keypoints_normalized)
         keypoints_with_conf = np.hstack([relative_kpts_xy, person_kpts_conf[:, None]])
         flattened = keypoints_with_conf.flatten()  # 51 features

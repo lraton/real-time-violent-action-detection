@@ -135,21 +135,13 @@ def process_video_folder(path_to_video):
 def calculate_movement_score(frames):
     # Converti in numpy array se non lo è
     data = np.array(frames)
-
     # Prendiamo solo le prime 2 colonne (X, Y relativi)
-    # Assumiamo che la forma sia (frames, 17, 3) dove 3 è (x, y, conf)
     coords = data[:, :, :2]
-
     # Calcola la differenza (velocità) tra frame consecutivi
-    # diffs sarà (N-1, 17, 2)
     diffs = np.diff(coords, axis=0)
-
     # Calcola la magnitudine del movimento per ogni keypoint (distanza euclidea)
-    # magnitudes sarà (N-1, 17)
     magnitudes = np.linalg.norm(diffs, axis=2)
-
     # Somma il movimento di tutti i keypoint per ogni frame, poi fai la media temporale
-    # Questo ci dà un numero unico: "quanto si muove mediamente questo scheletro per frame"
     avg_movement = np.mean(np.sum(magnitudes, axis=1))
 
     return avg_movement
@@ -162,8 +154,7 @@ def normalize_keypoints_relative_to_torso(i, keypoints_normalized):
     left_shoulder = person_keypoints[LEFT_SHOULDER_IDX]
     right_shoulder = person_keypoints[RIGHT_SHOULDER_IDX]
 
-    # Verifica se le spalle sono state rilevate (conf > 0 o coord != 0)
-    # YOLO normalizzato a volte mette 0,0 quando non rileva
+    # Verifica se le spalle sono state rilevate
     if left_shoulder[0] != 0 and right_shoulder[0] != 0:
         
         # Trova il centro del torso
@@ -172,11 +163,10 @@ def normalize_keypoints_relative_to_torso(i, keypoints_normalized):
         # Calcola la larghezza (Fattore di scala)
         shoulder_width = np.linalg.norm(left_shoulder - right_shoulder)
         
-        # Protezione matematica: se per assurdo la larghezza è 0 (punti sovrapposti)
         if shoulder_width < 0.01: 
             shoulder_width = 1.0 # Evita esplosione dei numeri
 
-        # Normalizzazione completa (Centratura + Scala)
+        # Normalizzazione completa
         relative_keypoints = (person_keypoints - center_point) / shoulder_width
 
     else:

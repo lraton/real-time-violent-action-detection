@@ -11,7 +11,7 @@ frame_skip = 2
 
 
 class VideoStream:
-    """Class to handle individual video stream"""
+    # Oggetto per gestire ogni stream video
 
     def __init__(self, video_path, stream_id):
         self.video_path = video_path
@@ -36,7 +36,7 @@ class UI:
         self.root.geometry("1600x900")
         self.root.configure(bg="#0a0e27")
 
-        # Color Scheme
+        # Scheme colori
         # Backgrounds
         self.bg_dark = "#2b2b2b"  # Sfondo principale (Grigio Scuro Antracite)
         self.bg_panel = "#333333"  # Pannelli laterali (Grigio leggermente più chiaro)
@@ -53,10 +53,10 @@ class UI:
         self.text_dim = "#cccccc"  # Grigio chiaro per testo secondario
         self.success_color = "#388e3c"  # Verde scuro professionale
 
-        self.video_streams = []  # List of VideoStream objects
-        self.video_labels = []  # List of labels for video display
-        self.fps_labels = []  # List of FPS labels
-        self.app = None  # Your detection app instance
+        self.video_streams = []  # Lista di oggetti VideoStream
+        self.video_labels = []  # Lista di etichette per la visualizzazione video
+        self.fps_labels = []  # Lista di etichette FPS
+        self.app = None  # Istanza della tua app di rilevamento
         self.is_processing = False
 
         self.create_widgets()
@@ -69,11 +69,11 @@ class UI:
         title_label = tk.Label(header, text="MULTI-STREAM VIOLENCE DETECTION", font=("Courier New", 24, "bold"), fg=self.accent_cyan, bg=self.bg_dark)
         title_label.pack(side="left", padx=30, pady=15)
 
-        # Status indicator
+        # Indicatore di stato
         self.status_indicator = tk.Label(header, text="● STANDBY", font=("Courier New", 14, "bold"), fg="#888888", bg=self.bg_dark)
         self.status_indicator.pack(side="right", padx=30, pady=15)
 
-        # Separator line
+        # Linea separatrice
         separator = tk.Frame(self.root, bg=self.accent_purple, height=2)
         separator.pack(fill="x")
 
@@ -98,7 +98,7 @@ class UI:
         self.video_grid_frame = tk.Frame(self.left_panel, bg=self.bg_video, relief="flat")
         self.video_grid_frame.pack(fill="both", expand=True, padx=15, pady=(0, 15))
 
-        # Initial empty state
+        # Messaggio iniziale vuoto
         self.empty_label = tk.Label(self.video_grid_frame,
                                     bg=self.bg_video,
                                     text="NO VIDEOS LOADED\n\n▼\n\nClick 'LOAD VIDEOS' to start",
@@ -117,11 +117,11 @@ class UI:
 
         tk.Label(right_header, text="► DETECTION DATA", font=("Courier New", 14, "bold"), fg=self.accent_purple, bg=self.bg_panel).pack(side="left")
 
-        # Detection counter
+        # Contatore rilevazioni
         self.detection_count = tk.Label(right_header, text="0", font=("Courier New", 12, "bold"), fg=self.accent_red, bg=self.bg_panel)
         self.detection_count.pack(side="right")
 
-        # List frame with scrollbar
+        # Contenitore lista con scrollbar
         list_container = tk.Frame(right_panel, bg=self.bg_video)
         list_container.pack(fill="both", expand=True, padx=15, pady=(0, 15))
 
@@ -142,7 +142,7 @@ class UI:
         self.object_listbox.pack(fill="both", expand=True, padx=2, pady=2)
         scrollbar.config(command=self.object_listbox.yview)
 
-        # Initial message
+        # Messaggio iniziale
         self.object_listbox.insert(tk.END, "╔═══════════════════════════════╗")
         self.object_listbox.insert(tk.END, "║   WAITING FOR VIDEO INPUT...  ║")
         self.object_listbox.insert(tk.END, "╚═══════════════════════════════╝")
@@ -154,7 +154,7 @@ class UI:
         controls_frame = tk.Frame(footer, bg=self.bg_panel)
         controls_frame.pack(expand=True, pady=20)
 
-        # Load Videos button
+        # Pulsante Carica Video
         self.load_btn = tk.Button(controls_frame,
                                   text="▶ LOAD VIDEOS",
                                   font=("Courier New", 12, "bold"),
@@ -169,7 +169,7 @@ class UI:
                                   command=self.load_videos)
         self.load_btn.pack(side="left", padx=10)
 
-        # Stop button
+        # Pulsante Stop
         self.stop_btn = tk.Button(controls_frame,
                                   text="■ STOP ALL",
                                   font=("Courier New", 12, "bold"),
@@ -185,7 +185,7 @@ class UI:
                                   command=self.stop_videos)
         self.stop_btn.pack(side="left", padx=10)
 
-        # Suspect folder button
+        # Pulsante cartella sospetti
         self.folder_btn = tk.Button(controls_frame,
                                     text="📁 Open Suspect Folder",
                                     font=("Courier New", 12, "bold"),
@@ -202,7 +202,7 @@ class UI:
         self.folder_btn.pack(side="left", padx=10)
         self.folder_btn.config(state="normal")
 
-        # LOGS folder button
+        # Pulsante cartella LOGS
         self.logs_btn = tk.Button(controls_frame,
                                   text="📁 Open LOGS Folder",
                                   font=("Courier New", 12, "bold"),
@@ -220,14 +220,15 @@ class UI:
         self.logs_btn.config(state="normal")
 
     def load_videos(self):
-        """Open file dialog to select multiple videos"""
+        # Apri file dialog per selezionare video
         video_paths = filedialog.askopenfilenames(title="Select Video Files (Multiple Selection)", filetypes=[("Video files", "*.mp4 *.avi *.mov *.mkv"), ("All files", "*.*")])
 
         if video_paths:
             self.start_videos(video_paths)
 
     def calculate_grid_layout(self, num_videos):
-        """Calculate optimal grid layout for N videos"""
+        # Calcola il layout della griglia in base al numero di video
+
         if num_videos == 1:
             return 1, 1
         elif num_videos == 2:
@@ -246,8 +247,8 @@ class UI:
             return rows, cols
 
     def create_video_grid(self, num_videos):
-        """Create grid layout for video displays"""
-        # Clear existing grid
+        # Crea il layout della griglia per la visualizzazione dei video
+        # Pulisci la griglia esistente
         for widget in self.video_grid_frame.winfo_children():
             widget.destroy()
 
@@ -261,13 +262,13 @@ class UI:
 
         rows, cols = self.calculate_grid_layout(num_videos)
 
-        # Configure grid weights for equal distribution
+        # Configura i pesi della griglia per una distribuzione uniforme
         for i in range(rows):
             self.video_grid_frame.rowconfigure(i, weight=1)
         for j in range(cols):
             self.video_grid_frame.columnconfigure(j, weight=1)
 
-        # Create video cells
+        # Crea le celle video
         for idx in range(num_videos):
             row = idx // cols
             col = idx % cols
@@ -276,7 +277,7 @@ class UI:
             cell = tk.Frame(self.video_grid_frame, bg=self.bg_video, relief="solid", bd=1)
             cell.grid(row=row, column=col, sticky="nsew", padx=2, pady=2)
 
-            # Video header with stream ID and FPS
+            # Intestazione video con ID stream e FPS
             header = tk.Frame(cell, bg="#0d1120", height=30)
             header.pack(fill="x")
             header.pack_propagate(False)
@@ -287,17 +288,17 @@ class UI:
             fps_label.pack(side="right", padx=10, pady=5)
             self.fps_labels.append(fps_label)
 
-            # Video display
+            # Visualizzazione video
             video_label = tk.Label(cell, bg="#000000")
             video_label.pack(fill="both", expand=True)
             self.video_labels.append(video_label)
 
     def start_videos(self, video_paths):
-        """Initialize video captures and start processing"""
-        # Stop any existing streams
+        # Inizializza le acquisizioni video e avvia l'elaborazione
+        # Ferma eventuali stream esistenti
         self.stop_videos()
 
-        # Create video streams
+        # Crea stream video
         for idx, path in enumerate(video_paths):
             stream = VideoStream(path, idx)
             if stream.cap.isOpened():
@@ -311,16 +312,16 @@ class UI:
             self.object_listbox.insert(tk.END, "✗ ERROR: Could not open any video files")
             return
 
-        # Create grid layout
+        # Crea il layout della griglia
         self.create_video_grid(len(self.video_streams))
 
-        # Update UI state
+        # Aggiorna lo stato dell'interfaccia utente
         self.load_btn.config(state="disabled")
         self.stop_btn.config(state="normal")
         self.status_indicator.config(text="● PROCESSING", fg=self.success_color)
         self.stream_count_label.config(text=f"{len(self.video_streams)} streams")
 
-        # Clear detection list
+        # Pulisci la lista delle rilevazioni  
         self.object_listbox.delete(0, tk.END)
         self.object_listbox.insert(tk.END, "╔═══════════════════════════════╗")
         self.object_listbox.insert(tk.END, "║     DETECTION INITIALIZED     ║")
@@ -328,11 +329,11 @@ class UI:
 
         self.is_processing = True
 
-        # Start frame update loop
+        # Avvia il ciclo di aggiornamento dei frame
         self.update_frames()
 
     def stop_videos(self):
-        """Stop all video processing"""
+        # Ferma tutti gli stream video e resetta l'interfaccia utente
         self.is_processing = False
 
         for stream in self.video_streams:
@@ -344,10 +345,10 @@ class UI:
         self.status_indicator.config(text="● STANDBY", fg="#888888")
         self.stream_count_label.config(text="0 streams")
 
-        # Reset detection counter
+        # Resetta il contatore delle rilevazioni
         self.detection_count.config(text="0")
 
-        # Clear grid
+        # Pulisci la griglia
         self.create_video_grid(0)
 
         self.object_listbox.delete(0, tk.END)
@@ -356,7 +357,7 @@ class UI:
         self.object_listbox.insert(tk.END, "╚═══════════════════════════════╝")
 
     def suspect_folder(self):
-        """Open suspect folder in file explorer"""
+        # Apri la cartella suspect nell'explorer
         import os
         suspect_folder_path = os.path.abspath("../suspect/")
         if not os.path.exists(suspect_folder_path):
@@ -364,7 +365,7 @@ class UI:
         os.startfile(suspect_folder_path)
 
     def logs_folder(self):
-        """Open logs folder in file explorer"""
+        # Apri la cartella logs nell'explorer
         import os
         logs_folder_path = os.path.abspath("logs/")
         if not os.path.exists(logs_folder_path):
@@ -372,7 +373,7 @@ class UI:
         os.startfile(logs_folder_path)
 
     def update_frames(self):
-        """Main frame processing loop for all streams"""
+        # Ciclo principale di elaborazione dei frame per tutti gli stream
         if not self.is_processing or not self.video_streams:
             return
 
@@ -385,7 +386,7 @@ class UI:
 
             active_streams.append(stream)
 
-            # Reset counter_frames ogni frame_skip frame
+            # Reset counter_frames ogni frame_skip frame 
             if stream.counter_frames == frame_skip:
                 stream.counter_frames = 0
 
@@ -408,7 +409,7 @@ class UI:
                     if self.app is not None:
                         frame_drawn, detected_strings = self.app.process_frame(frame, frame_skip)
                     else:
-                        # Demo mode without app
+                        # Modalità demo senza app
                         frame_drawn = frame.copy()
                         detected_strings = [
                             f"[Stream #{idx+1}] Person detected - Non-violent",
@@ -423,19 +424,19 @@ class UI:
                 frame_drawn = frame
                 detected_strings = [f"[Stream #{idx+1}] ✗ Processing error"]
 
-            # Add detections to master list
+            # Raccogli tutte le rilevazioni
             all_detections.extend(detected_strings)
 
-            # Update FPS label
+            # Aggiorna l'etichetta FPS
             if idx < len(self.fps_labels):
                 self.fps_labels[idx].config(text=f"FPS: {stream.fps:.1f}")
 
-            # Calculate display size based on grid
+            # Calcola la dimensione di visualizzazione basata sulla griglia
             if idx < len(self.video_labels):
                 label_width = self.video_labels[idx].winfo_width()
                 label_height = self.video_labels[idx].winfo_height()
 
-                # Use reasonable defaults if window not fully rendered
+                # Usa valori predefiniti ragionevoli se la finestra non è completamente renderizzata
                 if label_width < 10:
                     label_width = 400
                 if label_height < 10:
@@ -443,7 +444,7 @@ class UI:
 
                 frame_drawn = cv2.resize(frame_drawn, (label_width, label_height))
 
-                # Update video display
+                # Aggiorna la visualizzazione video
                 cv2image = cv2.cvtColor(frame_drawn, cv2.COLOR_BGR2RGB)
                 img = Image.fromarray(cv2image)
                 imgtk = ImageTk.PhotoImage(image=img)
@@ -453,7 +454,7 @@ class UI:
             # Incrementa il contatore dei frame
             stream.counter_frames += 1
 
-        # Update detection list
+        # Aggiorna la lista delle rilevazioni
         self.object_listbox.delete(0, tk.END)
         if not all_detections:
             self.object_listbox.insert(tk.END, "[ NO DETECTION ]")
@@ -462,11 +463,11 @@ class UI:
 
             for obj_str in all_detections:
                 self.object_listbox.insert(tk.END, obj_str)
-                # Color coding for violent detections
+                # Codifica colore per rilevazioni violente   
                 if "violent" in obj_str.lower() or "knife" in obj_str.lower() or "weapon" in obj_str.lower():
                     self.object_listbox.itemconfig(tk.END, fg=self.accent_red)
 
-        # Check if all streams ended
+        # Controlla se tutti gli stream sono terminati
         if not active_streams:
             print("All streams ended")
             self.stop_videos()

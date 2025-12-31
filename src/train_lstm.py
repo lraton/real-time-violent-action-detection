@@ -9,6 +9,7 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
 from sklearn.metrics import classification_report
+from sklearn.utils.class_weight import compute_class_weight
 
 # --- CONFIGURAZIONE ---
 DATA_PATH = "../datasets/lstm_dataset/"
@@ -16,7 +17,7 @@ MODEL_PATH = "../models/lstm_violence_detector_v8.keras"
 MAX_FRAMES = 150
 BATCH_SIZE = 32  
 EPOCHS = 100
-MASK_VALUE = -1.0  # Usiamo -1 per il padding
+MASK_VALUE = -999.0
 
 
 def main():
@@ -41,13 +42,6 @@ def main():
 def preprocess_data(X, y):
     print("Preprocessing e Normalizzazione...")
 
-    # STEP A: Normalizzazione (Assumendo che i keypoints siano grezzi)
-    # Sarebbe meglio normalizzare durante la creazione del dataset,
-    # ma se non puoi, assicurati che i dati qui siano tra 0 e 1.
-    # Se sono già normalizzati nel .npz, salta questo commento.
-
-    # STEP B: Padding con valore speciale
-    # Usiamo 'pre' padding: aiuta la LSTM a ricordare meglio la fine dell'azione
     X = pad_sequences(X, maxlen=MAX_FRAMES, dtype='float32', padding='post', truncating='post', value=MASK_VALUE)
 
     # Reshape
@@ -64,6 +58,11 @@ def create_and_train_model(X, y):
     X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.2, stratify=y_train, random_state=42)
 
     print(f"Train: {X_train.shape}, Val: {X_val.shape}, Test: {X_test.shape}")
+
+    # Calcolo dei pesi per bilanciare le classi (Violento vs Non Violento)
+    class_weights = compute_class_weight(class_weight='balanced', classes=np.unique(y_train), y=y_train)
+    class_weight_dict = dict(enumerate(class_weights))
+    print(f"Pesi calcolati (0=NonViolento, 1=Violento): {class_weight_dict}")
 
     # Architettura Migliorata
     print("Creazione modello Bidirectional LSTM...")
