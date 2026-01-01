@@ -6,10 +6,6 @@ import time
 import math
 from violence_detection_system import ViolenceDetectionSystem
 
-# Variabili globali
-frame_skip = 2
-
-
 class VideoStream:
     # Oggetto per gestire ogni stream video
 
@@ -35,6 +31,10 @@ class UI:
         self.root.title("VIOLENCE DETECTION SYSTEM")
         self.root.geometry("1600x900")
         self.root.configure(bg="#0a0e27")
+
+        # Variabili di controllo
+        self.current_frame_skip = 2  # Valore predefinito
+        self.frame_skip_var = tk.IntVar(value=2) # Variabile Tkinter per lo spinbox
 
         # Scheme colori
         # Backgrounds
@@ -153,6 +153,23 @@ class UI:
 
         controls_frame = tk.Frame(footer, bg=self.bg_panel)
         controls_frame.pack(expand=True, pady=20)
+
+        # --- SEZIONE FRAME SKIP ---
+        skip_frame_container = tk.Frame(controls_frame, bg=self.bg_panel, bd=1, relief="solid")
+        skip_frame_container.pack(side="left", padx=(0, 20), pady=10)
+        
+        tk.Label(skip_frame_container, text="FRAME SKIP:", font=("Courier New", 10, "bold"), fg=self.text_dim, bg=self.bg_panel).pack(side="left", padx=5)
+        
+        # Spinbox per selezionare 1, 2, 3, 4, 5
+        self.skip_spinner = tk.Spinbox(skip_frame_container, 
+                                       from_=1, to=5, 
+                                       textvariable=self.frame_skip_var, 
+                                       width=3, 
+                                       font=("Courier New", 12, "bold"),
+                                       state="readonly", # L'utente può cliccare le frecce ma non scrivere
+                                       bg="white")
+        self.skip_spinner.pack(side="left", padx=5, pady=5)
+        # --------------------------
 
         # Pulsante Carica Video
         self.load_btn = tk.Button(controls_frame,
@@ -298,6 +315,10 @@ class UI:
         # Ferma eventuali stream esistenti
         self.stop_videos()
 
+        # LEGGI IL VALORE DEL FRAME SKIP DALLA UI
+        self.current_frame_skip = self.frame_skip_var.get()
+        print(f"Starting videos with Frame Skip: {self.current_frame_skip}")
+
         # Crea stream video
         for idx, path in enumerate(video_paths):
             stream = VideoStream(path, idx)
@@ -317,8 +338,10 @@ class UI:
 
         # Aggiorna lo stato dell'interfaccia utente
         self.load_btn.config(state="disabled")
+        self.skip_spinner.config(state="disabled") 
         self.stop_btn.config(state="normal")
-        self.status_indicator.config(text="● PROCESSING", fg=self.success_color)
+        
+        self.status_indicator.config(text=f"● PROCESS (SKIP {self.current_frame_skip})", fg=self.success_color)
         self.stream_count_label.config(text=f"{len(self.video_streams)} streams")
 
         # Pulisci la lista delle rilevazioni  
@@ -380,6 +403,9 @@ class UI:
         all_detections = []
         active_streams = []
 
+        # Usa la variabile di istanza catturata all'avvio
+        active_frame_skip = self.current_frame_skip
+
         for idx, stream in enumerate(self.video_streams):
             if not stream.cap.isOpened():
                 continue
@@ -387,7 +413,7 @@ class UI:
             active_streams.append(stream)
 
             # Reset counter_frames ogni frame_skip frame 
-            if stream.counter_frames == frame_skip:
+            if stream.counter_frames == active_frame_skip:
                 stream.counter_frames = 0
 
             # Calcolo FPS
@@ -405,9 +431,9 @@ class UI:
 
             try:
                 # Processa il frame solo ogni 'frame_skip' frame
-                if stream.counter_frames % frame_skip == 0:
+                if stream.counter_frames % active_frame_skip == 0:
                     if self.app is not None:
-                        frame_drawn, detected_strings = self.app.process_frame(frame, frame_skip)
+                        frame_drawn, detected_strings = self.app.process_frame(frame, active_frame_skip)
                     else:
                         # Modalità demo senza app
                         frame_drawn = frame.copy()
@@ -483,7 +509,7 @@ def main():
 
     app.app = ViolenceDetectionSystem(knife_model_path="../models/knife/run2/weights/best.pt",
                                       pose_model_path="../models/yolo11n-pose.pt",
-                                      lstm_model_path="../models/lstm_violence_detector_v7.keras")
+                                      lstm_model_path="../models/lstm_violence_detector_v8.keras")
 
     root.mainloop()
 
