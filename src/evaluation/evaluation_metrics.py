@@ -64,7 +64,7 @@ def main():
     plt.ylabel('Reale (Ground Truth)')
     plt.xlabel('Predetto dal Sistema')
     plt.tight_layout()
-    plt.savefig('//evaluation_results/confusion_matrix_v8.png', bbox_inches='tight')
+    plt.savefig('/evaluation_results/confusion_matrix_v8.png', bbox_inches='tight')
 
     # ----- Metriche Avanzate (AUC) - Binario: Safe vs Danger -----
 
