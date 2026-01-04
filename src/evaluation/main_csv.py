@@ -23,7 +23,7 @@ def evaluate():
                 continue
 
             video_path = os.path.join(category_path, video_name)
-            print(f"Processing {category}/{video_name}")
+            #print(f"Processing {category}/{video_name}")
 
             cap = cv2.VideoCapture(video_path)
             app.last_video_id = None  # Reset video state

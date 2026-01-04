@@ -7,7 +7,7 @@ from sklearn.metrics import (classification_report, confusion_matrix, ConfusionM
 
 def main():
     # ----- Caricamento Dati -----
-    filename = "predictions.csv"  # O "evaluation/predictions.csv"
+    filename = "evaluation_results/predictions_v8.csv"  # O "evaluation/predictions.csv"
     try:
         df = pd.read_csv(filename)
         print(f"Caricati {len(df)} record da {filename}")
@@ -64,7 +64,7 @@ def main():
     plt.ylabel('Reale (Ground Truth)')
     plt.xlabel('Predetto dal Sistema')
     plt.tight_layout()
-    plt.savefig('/evaluation_results/confusion_matrix_v8.png', bbox_inches='tight')
+    plt.savefig('evaluation_results/confusion_matrix_v8.png', bbox_inches='tight')
 
     # ----- Metriche Avanzate (AUC) - Binario: Safe vs Danger -----
 
@@ -91,35 +91,35 @@ def main():
     else:
         print("\nAttenzione: Impossibile calcolare AUC. Il CSV contiene solo una classe (tutti violenti o tutti calmi).")
 
-    # ----- FLICKER RATE -----
+    # ----- FLICKER RATE CORRETTO -----
     def calculate_flicker_rate(df):
         flicker_scores = []
+        
+        # MODIFICA QUI: Raggruppa anche per person_id
+        # In questo modo calcoliamo la stabilità temporale della singola persona
+        grouped = df.groupby(["video_id", "person_id"])
 
-        # Raggruppa per video (non vogliamo calcolare il cambio tra la fine del video A e l'inizio del video B)
-        grouped = df.groupby("video_id")
-
-        for video_id, group in grouped:
-            # Ordina per frame per essere sicuri della sequenza temporale
+        for (video_id, person_id), group in grouped:
+            # Ordina per frame
             group = group.sort_values("frame_id")
-
+            
             preds = group["pred_class"].values
-
+            
+            # Servono almeno 2 frame della STESSA persona per calcolare il cambio
             if len(preds) < 2:
                 continue
-
-            # Calcola quanti cambi di stato ci sono (es. da 0 a 1, da 1 a 0, da 1 a 2...)
-            # preds[:-1] prende tutti tranne l'ultimo
-            # preds[1:] prende tutti tranne il primo
-            # Confrontandoli, vediamo se lo stato al tempo T è diverso da T-1
+            
+            # Calcola i cambiamenti di stato
             changes = np.sum(preds[1:] != preds[:-1])
-
-            # Formula: Cambiamenti / (Totale Frame - 1)
+            
+            # Normalizza
             score = changes / (len(preds) - 1)
             flicker_scores.append(score)
-
-            # Opzionale: stampa i video peggiori
-            if score > 0.1:
-                print(f"Video instabile: {video_id} (Flicker: {score:.3f})")
+            
+            # Debug per video/persone molto instabili
+            if score > 0.1: 
+                # Opzionale: stampa meno info per non intasare la console
+                pass 
 
         return np.mean(flicker_scores) if flicker_scores else 0.0
 

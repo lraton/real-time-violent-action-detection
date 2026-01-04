@@ -169,7 +169,6 @@ class UI:
                                        state="readonly", # L'utente può cliccare le frecce ma non scrivere
                                        bg="white")
         self.skip_spinner.pack(side="left", padx=5, pady=5)
-        # --------------------------
 
         # Pulsante Carica Video
         self.load_btn = tk.Button(controls_frame,
@@ -365,6 +364,7 @@ class UI:
 
         self.load_btn.config(state="normal")
         self.stop_btn.config(state="disabled")
+        self.skip_spinner.config(state="normal") 
         self.status_indicator.config(text="● STANDBY", fg="#888888")
         self.stream_count_label.config(text="0 streams")
 

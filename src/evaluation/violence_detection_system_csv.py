@@ -41,7 +41,6 @@ class ViolenceDetectionSystem:
         self.model_knife.to(device)
         print("Modelli caricati.")
 
-        self.saved_faces_ids = set()  # Per evitare salvataggi duplicati
         self.person_sequences = {}  # Sequenze di keypoints per ogni persona ID
 
         # --- GESTIONE FRAME ID ---
@@ -62,11 +61,23 @@ class ViolenceDetectionSystem:
 
         # --- INCREMENTO FRAME_ID ---
         if current_video_id != self.last_video_id:
-            print(f"Nuovo video rilevato ({current_video_id}). Reset frame_id e sequenze LSTM.")
+            if true_class ==0:
+                print(f"Nuovo video SAFE rilevato ({current_video_id}). Reset frame_id e Tracker YOLO.")
+            elif true_class ==1:
+                print(f"Nuovo video VIOLENTO rilevato ({current_video_id}). Reset frame_id e Tracker YOLO.")
+            else:
+                print(f"Nuovo video ACCOLTELLAMENTO rilevato ({current_video_id}). Reset frame_id e Tracker YOLO.")
+                
             self.frame_id = 0
             self.last_video_id = current_video_id
+
+            # --- RESET DELLE TUE VARIABILI ---
             self.person_sequences.clear()  # Pulisce la memoria dei movimenti precedenti
-            self.saved_faces_ids.clear()  # Reset salvataggio facce per nuovo video
+
+            # --- RESET DEL TRACKER DI YOLO ---
+            if hasattr(self.model_pose, 'predictor'):
+                self.model_pose.predictor = None
+
         else:
             self.frame_id += 1
 
@@ -190,14 +201,6 @@ class ViolenceDetectionSystem:
                     person_prefix = "Sospetto CON COLTELLO"
                     box_color = self.COLOR_VIOLENT  # Se è sospetto, colora di rosso
 
-                # Salva il volto se sospetto o violento (e non già salvato)
-                #if (is_suspect or is_violent):
-                #    log_message = f"{time.strftime('%Y/%m/%d-%H:%M:%S')} {person_prefix} {person_id} | {status_text} {score_text} | Confidence: {person_kpts_conf.mean():.2f}"
-                #    print(log_message)
-                #    self.write_log(log_message)
-                #    if person_id not in self.saved_faces_ids:
-                #        self.extract_suspicious_face(clean_frame, person_kpts_xy, person_box, person_id)
-
                 # Prepara i dati
                 final_label = f"{person_prefix} {person_id} | {status_text} {score_text} | Confidence: {person_kpts_conf.mean():.2f}"
 
@@ -225,55 +228,6 @@ class ViolenceDetectionSystem:
             cv2.putText(frame, data["label"], data["pos"], self.FONT, self.FONT_SCALE, data["color"], self.FONT_THICKNESS)
 
         return frame
-
-    # --- ESTRAZIONE VOLTO ---
-    def extract_suspicious_face(self, frame, person_keypoints, person_box, person_id):
-        # person_keypoints è (17, 2)
-        face_kpts = person_keypoints[:5]  # Naso (0), Occhi (1, 2), Orecchie (3, 4)
-
-        if face_kpts.min() <= 0:  # Se non ci sono keypoints validi
-            # Usa un fallback basato sul box della persona
-            p_x1, p_y1, p_x2, p_y2 = person_box
-            x1, y1 = p_x1, p_y1
-            x2, y2 = p_x2, p_y1 + (p_y2 - p_y1) // 3
-        else:
-            min_x = int(face_kpts[:, 0].min())
-            max_x = int(face_kpts[:, 0].max())
-            min_y = int(face_kpts[:, 1].min())
-            max_y = int(face_kpts[:, 1].max())
-
-            kpt_height = max_y - min_y
-            kpt_width = max_x - min_x
-
-            # Evita divisioni per zero se i punti sono coincidenti
-            if kpt_height == 0: kpt_height = 20
-            if kpt_width == 0: kpt_width = 20
-
-            width_expansion = int(kpt_width * 0.5)  # Espansione laterale
-            y_expansion_top = int(kpt_height * 1.5)  # Espansione sopra (capelli)
-            y_expansion_bottom = int(kpt_height * 1.0)  # Espansione sotto (mento)
-
-            x1 = max(0, min_x - width_expansion)
-            y1 = max(0, min_y - y_expansion_top)
-            x2 = min(frame.shape[1], max_x + width_expansion)
-            y2 = min(frame.shape[0], max_y + y_expansion_bottom)
-
-        # Taglia e salva
-        if x1 < x2 and y1 < y2:
-            face_image = frame[y1:y2, x1:x2]
-            if face_image.size > 0:
-                os.makedirs("pred_suspect/", exist_ok=True)
-                face_filename = f"pred_suspect/face_susp_{person_id}_{time.strftime('%Y%m%d_%H%M%S')}.jpg"
-                cv2.imwrite(face_filename, face_image)
-                # print(f"Volto sospetto salvato: {face_filename}")
-                self.saved_faces_ids.add(person_id)
-
-    #--- SCRITTURA LOG ---
-    def write_log(self, message):
-        os.makedirs("pred_logs", exist_ok=True)
-
-        with open(f"pred_logs/log{time.strftime('_%Y%m%d')}.txt", "a") as f:
-            f.write(f"{message}\n")
 
     #--- SALVATAGGIO RECORD CSV ---
     def save_csv_record(self, current_video_id, person_id, violence_score, is_suspect, true_class):
