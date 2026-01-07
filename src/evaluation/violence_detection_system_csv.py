@@ -28,6 +28,9 @@ class ViolenceDetectionSystem:
     # Scheletro
     SKELETON = [(5, 6), (5, 7), (7, 9), (6, 8), (8, 10), (11, 12), (5, 11), (6, 12), (11, 13), (13, 15), (12, 14), (14, 16)]
 
+    # Costante per garantire l'ordine delle colonne
+    CSV_COLUMNS = ["video_id", "frame_id", "person_id", "violence_score", "has_knife", "pred_class", "true_class"]
+
     def __init__(self, knife_model_path, pose_model_path, lstm_model_path):
         print("Caricamento modelli in corso...")
         # Carica il modello LSTM per la rilevazione della violenza
@@ -49,18 +52,28 @@ class ViolenceDetectionSystem:
 
         # --- Initialize CSV Header ---
         self.csv_filename = "evaluation_results/predictions_v8.csv"
-        # Check if file exists to avoid overwriting headers or if it needs creation
+                
+        # Crea la cartella se non esiste
+        os.makedirs(os.path.dirname(self.csv_filename), exist_ok=True)
+
+        # Scrivi l'header solo se il file non esiste
         if not os.path.exists(self.csv_filename):
             with open(self.csv_filename, "w", newline="") as f:
                 writer = csv.writer(f)
-                # Define columns
-                writer.writerow(["video_id", "frame_id", "person_id", "violence_score", "has_knife", "pred_class", "true_class"])
+                writer.writerow(self.CSV_COLUMNS) 
+        
+        self.predictions_buffer = []  # Buffer per le predizioni CSV
 
     # --- METODO PRINCIPALE CHIAMATO DAL MAIN ---
     def process_frame(self, frame, frame_skip, current_video_id, true_class):
 
         # --- INCREMENTO FRAME_ID ---
         if current_video_id != self.last_video_id:
+
+            if self.last_video_id is not None:
+                print(f"Fine video {self.last_video_id}. Salvataggio dati in corso...")
+                self.flush_buffer_to_csv() # Salva il buffer nel CSV
+
             if true_class ==0:
                 print(f"Nuovo video SAFE rilevato ({current_video_id}). Reset frame_id e Tracker YOLO.")
             elif true_class ==1:
@@ -70,8 +83,7 @@ class ViolenceDetectionSystem:
                 
             self.frame_id = 0
             self.last_video_id = current_video_id
-
-            # --- RESET DELLE TUE VARIABILI ---
+            self.person_sequences.clear()
             self.person_sequences.clear()  # Pulisce la memoria dei movimenti precedenti
 
             # --- RESET DEL TRACKER DI YOLO ---
@@ -178,10 +190,6 @@ class ViolenceDetectionSystem:
                 # Predizione della violenza
                 violence_score = self.predict_violence(person_kpts_xyn, person_kpts_conf, frame_skip, person_id)
 
-                # Salva il record per metriche nel CSV
-                if violence_score is not None:
-                    self.save_csv_record(current_video_id, person_id, violence_score, is_suspect, true_class)
-
                 is_violent = False
                 status_text = "Non-Violenta"
                 box_color = self.COLOR_NON_VIOLENT
@@ -190,6 +198,8 @@ class ViolenceDetectionSystem:
                 # Analizza il risultato della predizione
                 if violence_score is not None:
                     is_violent = violence_score > self.VIOLENCE_THRESHOLD
+                    # Salva il record per metriche nel CSV
+                    self.save_csv_record(current_video_id, person_id, violence_score, is_suspect, is_violent, true_class)
                     score_text = f"({violence_score:.2f})"
                     if is_violent:
                         status_text = "VIOLENTA"
@@ -229,14 +239,13 @@ class ViolenceDetectionSystem:
 
         return frame
 
-    #--- SALVATAGGIO RECORD CSV ---
-    def save_csv_record(self, current_video_id, person_id, violence_score, is_suspect, true_class):
+    #--- AGGIUNTA RECORD CSV A LISTA ---
+    def save_csv_record(self, current_video_id, person_id, violence_score, is_suspect, is_violent, true_class):
         # --- DETERMINE CLASS ---
         # 0 = Safe, 1 = Physical Violence, 2 = Weapon Violence
-        if violence_score is not None and violence_score > self.VIOLENCE_THRESHOLD:
-            if is_suspect:
+        if is_violent and is_suspect:
                 pred_class = 2  # weapon violence
-            else:
+        elif is_violent:
                 pred_class = 1  # physical violence
         else:
             pred_class = 0
@@ -252,13 +261,25 @@ class ViolenceDetectionSystem:
             "true_class": true_class
         }
 
-        # Write to CSV immediately (append mode)
+        # Aggiunta a lista
+        self.predictions_buffer.append(prediction_record)
+    
+    # --- SCRIVERE IL CSV DA BUFFER ---
+    def flush_buffer_to_csv(self):
+        if not self.predictions_buffer:
+            return  # Niente da scrivere
+
         try:
             with open(self.csv_filename, "a", newline="") as f:
-                writer = csv.DictWriter(f, fieldnames=prediction_record.keys())
-                writer.writerow(prediction_record)
+                writer = csv.DictWriter(f, fieldnames=self.CSV_COLUMNS)
+                # Scrive tutte le righe in un colpo solo (molto veloce)
+                writer.writerows(self.predictions_buffer)
+            
+            print(f"Salvate {len(self.predictions_buffer)} righe nel CSV.")
+            # Svuota il buffer per il prossimo video
+            self.predictions_buffer.clear()
         except Exception as e:
-            print(f"Error writing to CSV: {e}")
+            print(f"Errore salvataggio CSV: {e}")
 
     #--- NORMALIZZAZIONE KEYPOINT TO TORSO ---
     def normalize_keypoints_relative_to_torso(self, person_keypoints_xyn):

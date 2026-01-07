@@ -26,7 +26,6 @@ def evaluate():
             #print(f"Processing {category}/{video_name}")
 
             cap = cv2.VideoCapture(video_path)
-            app.last_video_id = None  # Reset video state
 
             frame_id = 0
             while True:
@@ -38,6 +37,9 @@ def evaluate():
                 frame_id += 1
 
             cap.release()
+
+    print("Salvataggio ultimi dati in corso...")
+    app.flush_buffer_to_csv()
 
     print("Evaluation completed.")
 
