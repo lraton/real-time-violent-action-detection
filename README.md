@@ -4,6 +4,10 @@ This project implements a real-time detection system to identify potentially dan
 
 ---
 
+![Violence detection system application](violencedetectionsystem_app.png)
+
+---
+
 ##  Technologies and Tools
 - ~~**PyTorch**: ``` pip install torch torchvision numpy scikit-learn opencv-python ```~~
 
