@@ -113,10 +113,10 @@ def main():
     print(f"Analisi completata su {len(y_true_people)} persone uniche.")
 
     # ----- Report Testuale -----
-    print("\n" + "=" * 40)
+    print("\n" + "=" * 56)
     print("=== REPORT PER SOGGETTO (PERSON-LEVEL) ===")
     print(f"Soglia validazione: {CONSECUTIVE_THRESHOLD} frame consecutivi")
-    print("=" * 40)
+    print("=" * 56)
 
     target_names_map = {0: "Non violento", 1: "Aggressione", 2: "Accoltellamento"}
     unique_lbls = sorted(np.unique(np.concatenate((y_true_people, y_pred_people))))
@@ -137,7 +137,7 @@ def main():
     print(f"Grafico salvato in: {OUTPUT_IMAGE}")
 
     # ----- Metriche Avanzate (Safe vs Danger) -----
-    print("\n" + "=" * 40)
+    print("\n" + "=" * 56)
     print("=== METRICHE GLOBALI PERSONA ===")
 
     y_true_bin = (y_true_people > 0).astype(int)
@@ -156,9 +156,9 @@ def main():
         print("Impossibile calcolare AUC.")
 
     # ----- 6. Stampa Flicker Rate -----
-    print("\n" + "=" * 40)
+    print("\n" + "=" * 56)
     print(f"STABILITÀ SISTEMA (Flicker Rate): {avg_flicker:.4f}")
-    print("=" * 40)
+    print("=" * 56)
 
     plt.show()
 

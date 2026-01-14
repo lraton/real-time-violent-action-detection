@@ -6,6 +6,7 @@ from sklearn.metrics import (classification_report, confusion_matrix, roc_auc_sc
 
 INPUT_CSV = "evaluation_results/predictions_v8_v2.csv"
 OUTPUT_IMAGE = "evaluation_results/confusion_matrix_v8_byvideo.png"
+OUTPUT_TXT_FILE = "evaluation_results/report_video_metrics_v8.txt"
 
 def print_dataset_stats(df):
     """
@@ -46,10 +47,6 @@ def print_dataset_stats(df):
             print("  (Nessun video trovato)")
 
     print("\n" + "="*60 + "\n")
-
-# --- ESEMPIO DI UTILIZZO NEL MAIN ---
-# df = pd.read_csv("...")
-# print_dataset_stats(df)
 
 # ----- FRAME CONSECUTIVI -----
 def has_consecutive_violence(group, threshold=5):
@@ -158,15 +155,46 @@ def main():
 
     print(f"Analisi completata su {len(y_true_video)} video unici.")
 
-    # ----- REPORT -----
-    print("\n" + "=" * 40)
-    print(f"=== REPORT PER VIDEO (Soglia Consecutiva: {CONSECUTIVE_THRESHOLD} frames) ===")
-    print("=" * 40)
+    # ----- SALVATAGGIO REPORT SU FILE -----
+    
+    with open(OUTPUT_TXT_FILE, "w") as f:
+        
+        # Funzione helper per scrivere sia su console che su file
+        def log(text):
+            print(text)           # Stampa a video
+            f.write(text + "\n")  # Scrive nel file
 
-    target_names = ["Non Violento", "Violento"]
-    print(classification_report(y_true_video, y_pred_video, target_names=target_names, zero_division=0))
+        # 1. REPORT CLASSIFICAZIONE
+        log("\n" + "=" * 56)
+        log(f"=== REPORT PER VIDEO (Soglia Consecutiva: {CONSECUTIVE_THRESHOLD} frames) ===")
+        log("=" * 56)
 
-    # Confusion Matrix
+        target_names = ["Non Violento", "Violento"]
+        
+        # Generiamo il report come stringa
+        class_report = classification_report(y_true_video, y_pred_video, target_names=target_names, zero_division=0)
+        log(class_report)
+
+        # 2. METRICHE GLOBALI (AUC)
+        if len(np.unique(y_true_video)) > 1:
+            log("\n" + "=" * 56)
+            log("=== METRICHE GLOBALI ===")
+            
+            roc = roc_auc_score(y_true_video, y_score_video)
+            pr = average_precision_score(y_true_video, y_score_video)
+            
+            log(f"ROC-AUC Score : {roc:.4f}")
+            log(f"PR-AUC Score  : {pr:.4f}")
+
+        # 3. FLICKER RATE
+        log("\n" + "=" * 56)
+        log(f"FLICKER RATE: {avg_flicker:.4f}")
+        log("=" * 56)
+
+    print(f"\n[INFO] Report testuale salvato in: {OUTPUT_TXT_FILE}")
+
+    # ----- SALVATAGGIO GRAFICO MATRICE -----
+    # Confusion Matrix (Questa parte rimane uguale per l'immagine)
     cm = confusion_matrix(y_true_video, y_pred_video)
     plt.figure(figsize=(6, 5))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Reds', xticklabels=target_names, yticklabels=target_names)
@@ -174,18 +202,11 @@ def main():
     plt.ylabel('Reale')
     plt.xlabel('Predetto')
     plt.tight_layout()
-    plt.savefig(OUTPUT_IMAGE, bbox_inches='tight')
-
-    # AUC
-    if len(np.unique(y_true_video)) > 1:
-        print("\n" + "=" * 40)
-        print("=== METRICHE GLOBALI ===")
-        print(f"ROC-AUC Score : {roc_auc_score(y_true_video, y_score_video):.4f}")
-        print(f"PR-AUC Score  : {average_precision_score(y_true_video, y_score_video):.4f}")
     
-    print("\n" + "=" * 40)
-    print(f"FLICKER RATE: {avg_flicker:.4f}")
-    print("=" * 40)
+    # Assicurati di avere definito OUTPUT_IMAGE prima, ad esempio:
+    OUTPUT_IMAGE = "evaluation_results/confusion_matrix_video.png"
+    plt.savefig(OUTPUT_IMAGE, bbox_inches='tight')
+    print(f"[INFO] Grafico salvato in: {OUTPUT_IMAGE}")
 
     plt.show()
 
