@@ -4,41 +4,55 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import (classification_report, confusion_matrix, roc_auc_score, average_precision_score)
 
+INPUT_CSV = "evaluation_results/predictions_v8_v2.csv"
+OUTPUT_IMAGE = "evaluation_results/confusion_matrix_v8_v3_byperson.png"
 
-# ----- FUNZIONE FLICKER RATE -----
+# ----- FRAME CONSECUTIVI -----
+def has_consecutive_violence(group, threshold=5):
+    # Ordiniamo per frame per sicurezza
+    group = group.sort_values("frame_id")
+    
+    # Creiamo una serie booleana: True se è violento (1 o 2), False se è 0
+    is_violent = group["pred_class"] > 0
+    
+    # Calcolo delle sequenze consecutive
+    consecutive_groups = is_violent.groupby((is_violent != is_violent.shift()).cumsum())
+    
+    # Calcoliamo la dimensione di ogni blocco, ma solo se il blocco è violento
+    max_consecutive = 0
+    for _, grp in consecutive_groups:
+        if grp.iloc[0]: # Se è un blocco di 'True' (Violenza)
+            if len(grp) > max_consecutive:
+                max_consecutive = len(grp)
+    
+    return max_consecutive >= threshold
+
+
+# ----- FLICKER RATE -----
 def calculate_flicker_rate(df):
     """
-    Calcola quanto spesso la predizione cambia stato per la stessa persona.
-    Più basso è, più stabile è il modello.
+    Calcola la stabilità delle predizioni.
     """
     flicker_scores = []
-
-    # Raggruppa per video e persona per analizzare la sequenza temporale
     grouped = df.groupby(["video_id", "person_id"])
 
     for (video_id, person_id), group in grouped:
-        # Ordina per frame per garantire la sequenza temporale
         group = group.sort_values("frame_id")
-
         preds = group["pred_class"].values
-
-        # Servono almeno 2 frame per calcolare il cambio
-        if len(preds) < 2:
-            continue
-
-        # Calcola i cambiamenti di stato (es. da 0 a 1, da 1 a 0)
+        if len(preds) < 2: continue
+        
         changes = np.sum(preds[1:] != preds[:-1])
-
-        # Normalizza sul numero di frame
         score = changes / (len(preds) - 1)
         flicker_scores.append(score)
 
     return np.mean(flicker_scores) if flicker_scores else 0.0
 
-
 def main():
-    # ----- Caricamento e Preparazione Dati -----
-    filename = "evaluation_results/predictions_v8_v2.csv"
+    filename = INPUT_CSV
+    
+    # --- CONFIGURAZIONE SOGLIA ---
+    CONSECUTIVE_THRESHOLD = 2  # Es. 8 frame consecutivi (~0.25s a 30fps)
+
     try:
         df = pd.read_csv(filename)
         print(f"Caricati {len(df)} frame totali da {filename}")
@@ -46,51 +60,52 @@ def main():
         print(f"Errore: Il file {filename} non esiste.")
         return
 
-    # Pulizia e casting
+    # Pulizia
     df['pred_class'] = pd.to_numeric(df['pred_class'], errors='coerce').fillna(0).astype(int)
     df['true_class'] = pd.to_numeric(df['true_class'], errors='coerce').fillna(0).astype(int)
 
-    # Creazione "Score Unificato" (serve per l'AUC)
-    # Se ha un coltello (1.0) vince su tutto, altrimenti usa violence_score
+    # Score unificato
     df["unified_score"] = df.apply(lambda row: 1.0 if row.get("has_knife", 0) == 1 else row.get("violence_score", 0), axis=1)
 
-    # ----- Calcolo Flicker Rate (Prima dell'aggregazione) -----
+    # Calcolo Flicker
     avg_flicker = calculate_flicker_rate(df)
 
-    # ----- Logica di Aggregazione (PER PERSONA) -----
-    print("Elaborazione raggruppamento per persona...")
+    # ----- Logica di Aggregazione -----
+    print(f"Raggruppamento per Persona (Soglia Consecutiva: {CONSECUTIVE_THRESHOLD})...")
 
     grouped = df.groupby(['video_id', 'person_id'])
 
     y_true_people = []
     y_pred_people = []
-    y_score_people = []  # Serve per l'AUC
+    y_score_people = [] 
 
     for name, group in grouped:
-        # A. GROUND TRUTH (Realtà)
-        # Se la persona ha fatto anche solo 1 frame di accoltellamento (2), è etichettata come 2.
+
+        # Se c'è violenza vera in qualsiasi punto, il video è violento
         person_true_class = group['true_class'].max()
 
-        # B. SCORE (Per AUC)
-        # Prendiamo il picco massimo di pericolosità raggiunto dalla persona
+        # SCORE (Per AUC)
         person_max_score = group['unified_score'].max()
 
-        # C. PREDIZIONE (Logica Soglia 1%)
-        violent_frames = group[group['pred_class'] > 0]  # Frame predetti 1 o 2
-        percentage_violent = len(violent_frames) / len(group)
-
-        if percentage_violent > 0.01:  # Se > 1% dei frame sono violenti
-            # Prendiamo la classe violenta più grave predetta
-            person_pred_class = group['pred_class'].max()
+        # --- PREDIZIONE ---
+        # Controlliamo se questa specifica persona ha una sequenza violenta
+        if (group['pred_class'] == 2).any():
+            person_pred_class = 2
+        elif has_consecutive_violence(group, threshold=CONSECUTIVE_THRESHOLD):
+            violent_preds = group[group['pred_class'] > 0]['pred_class']
+            if not violent_preds.empty:
+                person_pred_class = violent_preds.max()
+            else:
+                person_pred_class = 1 # Fallback (improbabile se la funzione sopra è True)
         else:
-            # Sotto soglia, consideriamo falso allarme -> 0 (Calmo)
-            person_pred_class = 0
+            # Non ha abbastanza frame consecutivi -> consideriamo falso allarme
+            person_pred_class = 0 
 
         y_true_people.append(person_true_class)
         y_pred_people.append(person_pred_class)
         y_score_people.append(person_max_score)
 
-    # Convertiamo in array numpy per comodità
+    # Convertiamo in array
     y_true_people = np.array(y_true_people)
     y_pred_people = np.array(y_pred_people)
     y_score_people = np.array(y_score_people)
@@ -100,6 +115,7 @@ def main():
     # ----- Report Testuale -----
     print("\n" + "=" * 40)
     print("=== REPORT PER SOGGETTO (PERSON-LEVEL) ===")
+    print(f"Soglia validazione: {CONSECUTIVE_THRESHOLD} frame consecutivi")
     print("=" * 40)
 
     target_names_map = {0: "Non violento", 1: "Aggressione", 2: "Accoltellamento"}
@@ -108,55 +124,43 @@ def main():
 
     print(classification_report(y_true_people, y_pred_people, labels=unique_lbls, target_names=target_names, zero_division=0))
 
-    # ----- Matrice di Confusione (Grafica) -----
+    # ----- Matrice di Confusione -----
     cm = confusion_matrix(y_true_people, y_pred_people)
 
     plt.figure(figsize=(8, 6))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=target_names, yticklabels=target_names)
-    plt.title('Confusion Matrix (Livello Persona)')
+    plt.title(f'Confusion Matrix (Persona)\nSoglia: {CONSECUTIVE_THRESHOLD} frame cons.')
     plt.ylabel('Reale (Ground Truth)')
     plt.xlabel('Predetto dal Sistema')
     plt.tight_layout()
-    plt.savefig('evaluation_results/confusion_matrix_person_v8_byperson.png', bbox_inches='tight')
-    print("Grafico salvato in: evaluation_results/confusion_matrix_person_v8_byperson.png")
+    plt.savefig(OUTPUT_IMAGE, bbox_inches='tight')
+    print(f"Grafico salvato in: {OUTPUT_IMAGE}")
 
-    # ----- Metriche Avanzate (AUC - Safe vs Danger) -----
+    # ----- Metriche Avanzate (Safe vs Danger) -----
     print("\n" + "=" * 40)
-    print("=== METRICHE GLOBALI PERSONA (Safe vs Danger) ===")
+    print("=== METRICHE GLOBALI PERSONA ===")
 
-    # Binarizziamo: 0 = Safe, 1/2 = Danger
     y_true_bin = (y_true_people > 0).astype(int)
 
     if len(np.unique(y_true_bin)) > 1:
         roc_auc = roc_auc_score(y_true_bin, y_score_people)
         pr_auc = average_precision_score(y_true_bin, y_score_people)
 
-        print(f"ROC-AUC Score : {roc_auc:.4f} (Discriminazione generale)")
-        print(f"PR-AUC Score  : {pr_auc:.4f} (Affidabilità sui casi positivi)")
+        print(f"ROC-AUC Score : {roc_auc:.4f}")
+        print(f"PR-AUC Score  : {pr_auc:.4f}")
 
-        if pr_auc > 0.8:
-            print(">> Risultato: ECCELLENTE.")
-        elif pr_auc > 0.5:
-            print(">> Risultato: BUONO.")
-        else:
-            print(">> Risultato: SCARSO.")
+        if pr_auc > 0.8: print(">> Risultato: ECCELLENTE.")
+        elif pr_auc > 0.5: print(">> Risultato: BUONO.")
+        else: print(">> Risultato: SCARSO.")
     else:
-        print("Impossibile calcolare AUC (manca una delle due classi).")
+        print("Impossibile calcolare AUC.")
 
-    # ----- Stampa Flicker Rate -----
+    # ----- 6. Stampa Flicker Rate -----
     print("\n" + "=" * 40)
     print(f"STABILITÀ SISTEMA (Flicker Rate): {avg_flicker:.4f}")
-    if avg_flicker < 0.02:
-        print(">> ECCELLENTE: Il tracking è stabile.")
-    elif avg_flicker < 0.05:
-        print(">> BUONO: Qualche sfarfallio.")
-    else:
-        print(">> ATTENZIONE: Il sistema è instabile.")
     print("=" * 40)
 
-    # Mostra grafico
     plt.show()
-
 
 if __name__ == "__main__":
     main()
