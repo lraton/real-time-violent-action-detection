@@ -51,7 +51,7 @@ class ViolenceDetectionSystem:
         self.last_video_id = None
 
         # --- Initialize CSV Header ---
-        self.csv_filename = "evaluation_results/predictions_v8.csv"
+        self.csv_filename = "evaluation_results/predictions_v8_v2.csv"
                 
         # Crea la cartella se non esiste
         os.makedirs(os.path.dirname(self.csv_filename), exist_ok=True)

@@ -2,7 +2,7 @@ import cv2
 import os
 from violence_detection_system_csv import ViolenceDetectionSystem
 
-VIDEOS_DIR = "dataset_eval/"
+VIDEOS_DIR = "../../datasets/video-dataset/test"
 FRAME_SKIP = 2
 
 CLASS_MAP = {"safe": 0, "violence": 1, "weapon": 2}

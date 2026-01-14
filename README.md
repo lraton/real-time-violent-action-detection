@@ -9,7 +9,6 @@ This project implements a real-time detection system to identify potentially dan
 ---
 
 ##  Technologies and Tools
-- ~~**PyTorch**: ``` pip install torch torchvision numpy scikit-learn opencv-python ```~~
 
 - **YOLO (You Only Look Once)**: Object detection with Ultralytics.
   - YoloPose: Pose keypoint
@@ -18,10 +17,6 @@ This project implements a real-time detection system to identify potentially dan
     
 - **Roboflow**: Data management and preprocessing.
   - knife dataset
-    
-- ~~**MediaPipe**: Human pose estimation.~~
-    
-    - ~~[MediaPipe Google](ai.google.dev/edge/mediapipe/solutions/guide?hl=it)~~
         
 - **Violence Detection Dataset**: Dataset specifically designed for identifying violent actions.
     
@@ -39,7 +34,7 @@ This project implements a real-time detection system to identify potentially dan
 ```
 pip install -r requirements.txt
 
-python yolo_run.py
+python main.py
 ```
 
 
@@ -52,7 +47,7 @@ source ~/my_venv/bin/activate
 
 pip install -r requirements.txt
 
-python yolo_run.py
+python main.py
 ```
 
 ---
