@@ -251,8 +251,8 @@ class ViolenceDetectionSystem:
         if x1 < x2 and y1 < y2:
             face_image = frame[y1:y2, x1:x2]
             if face_image.size > 0:
-                os.makedirs("../suspect/", exist_ok=True)
-                face_filename = f"../suspect/face_susp_{person_id}_{time.strftime('%Y%m%d_%H%M%S')}.jpg"
+                os.makedirs("suspect/", exist_ok=True)
+                face_filename = f"suspect/face_susp_{person_id}_{time.strftime('%Y%m%d_%H%M%S')}.jpg"
                 cv2.imwrite(face_filename, face_image)
                 # print(f"Volto sospetto salvato: {face_filename}")
                 self.saved_faces_ids.add(person_id)

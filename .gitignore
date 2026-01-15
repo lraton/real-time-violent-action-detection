@@ -2,10 +2,8 @@ datasets/coco8-pose/
 datasets/knife-dataset/
 src/.venv/
 src/__pycache__/
-src/test.py
 src/logs/
-suspect/
-src/test_det.py
+src/suspect/
 datasets/video-dataset/
 OIDv4_ToolKit/
 src/evaluation/__pycache__
