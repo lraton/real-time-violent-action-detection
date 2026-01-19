@@ -13,9 +13,9 @@ from sklearn.utils.class_weight import compute_class_weight
 
 # --- CONFIGURAZIONE ---
 DATA_PATH = "../datasets/lstm_dataset/"
-MODEL_PATH = "../models/lstm_violence_detector_v8.keras"
+MODEL_PATH = "../models/lstm_violence_detector_tmp.keras"
 MAX_FRAMES = 150
-BATCH_SIZE = 32  
+BATCH_SIZE = 32
 EPOCHS = 100
 MASK_VALUE = -999.0
 
@@ -54,10 +54,9 @@ def preprocess_data(X, y):
 
 def create_and_train_model(X, y):
     # Split Stratificato
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
-    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.2, stratify=y_train, random_state=42)
+    X_train, X_val, y_train, y_val = train_test_split(X,y,test_size=0.2,stratify=y,random_state=42)
 
-    print(f"Train: {X_train.shape}, Val: {X_val.shape}, Test: {X_test.shape}")
+    print(f"Train: {X_train.shape}, Val: {X_val.shape}")
 
     # Calcolo dei pesi per bilanciare le classi (Violento vs Non Violento)
     class_weights = compute_class_weight(class_weight='balanced', classes=np.unique(y_train), y=y_train)
@@ -99,17 +98,11 @@ def create_and_train_model(X, y):
         validation_data=(X_val, y_val),
         epochs=EPOCHS,
         batch_size=BATCH_SIZE,
-        class_weight=None,  # Se i dati sono 50/50 non serve, altrimenti calcolali
         callbacks=[checkpoint, earlystop, reduce_lr],
-        verbose=1)
+        verbose=1
+    )
 
-    # Valutazione
-    print("\n--- Report sul Test Set (Binario) ---")
-    model.load_weights(MODEL_PATH)
-    y_pred_prob = model.predict(X_test)
-    y_pred = (y_pred_prob > 0.5).astype("int32")
-
-    print(classification_report(y_test, y_pred, target_names=['Non Violento', 'Violento']))
+    print("\nTraining completato. Il modello migliore è stato salvato.")
 
 
 if __name__ == '__main__':
