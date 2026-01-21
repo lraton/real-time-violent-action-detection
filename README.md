@@ -1,98 +1,99 @@
 # Real-time Detection System for Suspicious Stabbing Movements
 
-This project implements a real-time detection system to identify potentially dangerous stabbing movements using advanced computer vision and machine learning techniques.
+An advanced real-time surveillance system designed to detect violence and potentially dangerous stabbing movements using Computer Vision and Deep Learning.
+
+![Violence Detection System App](img/violencedetectionsystem_app.png)
+
+## Overview
+
+This project implements a multi-stage pipeline to identify violent intent in real-time video streams. By combining object detection, pose estimation, and temporal sequence analysis (LSTM), the system can distinguish between normal activities and suspicious stabbing motions.
+
+### Key Features
+* **Real-time Analysis**: Processes video feeds with low latency.
+* **Object & Pose Detection**: Simultaneously detects persons, weapons (knives), and body keypoints.
+* **Temporal Logic**: Uses Long Short-Term Memory (LSTM) networks to understand the context of movement over time.
+* **Optimized Performance**: Implements frame skipping logic (processing 1 frame every N) while maintaining the required input buffer for the LSTM model.
 
 ---
 
-![Violence detection system application](violencedetectionsystem_app.png)
+## System Architecture
+
+The workflow consists of four main stages:
+
+1.  **Object Detection (YOLO11)**
+    * Identifies instances of `person` and `knife`.
+    * *Fine-tuned model:* Specifically trained to recognize knives with high precision using a custom dataset.
+    * Associates detected weapons with the closest person/hand.
+
+2.  **Pose Estimation (YoloPose)**
+    * Extracts skeletal keypoints (wrists, elbows, shoulders).
+    * Tracks motion vectors to analyze arm dynamics.
+
+3.  **Human Activity Recognition (HAR)**
+    * **Model**: LSTM (Long Short-Term Memory).
+    * **Logic**: Classifies motion patterns based on a sequence of 150 frames to detect stabbing actions.
+
+4.  **Alert System**
+    * Triggers a real-time alert when the confidence threshold for violent action is exceeded.
+    * Saving the face cropepd from the frame of the person who confidence threshold for violent action is exceeded
 
 ---
 
-##  Technologies and Tools
-
-- **YOLO (You Only Look Once)**: Object detection with Ultralytics.
-  - YoloPose: Pose keypoint
-  - Yolo: object detection
-    - Fine tuned for knife
-    
-- **Roboflow**: Data management and preprocessing.
-  - knife dataset
-        
-- **Violence Detection Dataset**: Dataset specifically designed for identifying violent actions.
-    
-    - [Violence Detection Dataset GitHub](https://github.com/airtlab/A-Dataset-for-Automatic-Violence-Detection-in-Videos/tree/master)
-        
+![Pipeline Violence Detection System App](img/pipelineLR.png)
 
 ---
 
-## Start program
+## Tech Stack
 
-### Windows
+* **Core**: Python, OpenCV
+* **Computer Vision**: [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) (Object Detection & Pose)
+* **Deep Learning**: TensorFlow / Keras (LSTM)
+* **Data Management**: [Roboflow](https://roboflow.com/) (Dataset preprocessing)
+* **Datasets**:
+    * Custom Knife Dataset
+    * [Automatic Violence Detection Dataset (GitHub)](https://github.com/airtlab/A-Dataset-for-Automatic-Violence-Detection-in-Videos/tree/master)
+    * [Indoor action DAtaset (GithHub)](https://github.com/DaniDeniz/IndoorActionDataset)
+    * [Real Life Violence Situations Dataset (Kaggle)](https://www.kaggle.com/datasets/mohamedmustafa/real-life-violence-situations-dataset)
+    * [RWF2000 (Kaggle)](https://www.kaggle.com/datasets/vulamnguyen/rwf2000)
 
-#### Shell senza GPU per lstm
+---
 
-```
-pip install -r requirements.txt
+## Getting Started
 
+### Prerequisites
+* Python 3.8+
+* CUDA-enabled GPU (recommended for real-time inference)
+
+### Installation
+
+1.  **Clone the repository**
+    ```bash
+    git clone [https://github.com/lraton/real-time-violent-action-detection.git](https://github.com/lraton/real-time-violent-action-detection.git)
+    cd real-time-violent-action-detection/src/
+    ```
+
+2.  **Install dependencies**
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+### Running the Application
+
+#### Option A: Windows (CPU / Standard Shell)
+Use this for testing without specific GPU configuration.
+
+```bash
 python main.py
 ```
 
+#### Option B: WSL / Linux (GPU Accelerated)
 
-#### WSL per gpu con TensorFlow (lstm)
+Recommended for best performance using TensorFlow with GPU support.
 
 ```
-wsl -d Ubutnu
-
+# Activate your environment (if applicable)
 source ~/my_venv/bin/activate
 
-pip install -r requirements.txt
-
+# Run the main script
 python main.py
 ```
-
----
-
-# TODO
-- [x] Modificare classe yoloapp
-  - [x] Dividere in piu classi, predict e gui
--  [X] Elaborare solo 1 frame su N
-   -  [X] In base a N, per ogni frame processato aggiungere N fram vuoti (o uguali) per lstm, che ne vuole comunque 150
-- [ ] Addestrare nuovo modello con non-violent Cam3
-- [ ] Ottimizzare
-  - [X] Drawing      : 1.0 ms , Se rimuovo plot delle pose
-  - [ ] Knife Detect : 28.0 ms
-  - [ ] Pose Detect  : 73.5 ms
-    - [ ] Usare tensort come modello
-    - [ ] Provare MoveNet Lightning
-  - [ ] Logic/LSTM   : 78.0 ms
-    - [ ] tf.lite.TFLiteConverter
-    - [ ] Quantizzazione 8bit
----
-
-## 📝 Workflow Steps
-
-1. **Object Detection (YOLO)**:
-    
-    - Analyze each video frame to detect instances of:
-        
-        - `person`
-            
-        - `knife`
-            
-    - Associate detected knives with the closest identified hand/person.
-        
-2. **Pose Estimation (YOLO)**:
-    
-    - Extract keypoints such as wrists, elbows, and shoulders.
-        
-    - Calculate and track **motion vectors** of arms and hands.
-        
-3. **Human Activity Recognition HAR**:
-    
-    - Use machine learning methods (e.g., LSTM or CNN) to classify motion patterns over time.
-        
-    - Identify suspicious patterns indicative of stabbing or violent intent.
-        
-4. **Alert Triggering**:
-    
-    - Generate a real-time alert if the system detects:
