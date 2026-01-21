@@ -7,7 +7,7 @@ from sklearn.metrics import (classification_report, confusion_matrix, ConfusionM
 
 def main():
     # ----- Caricamento Dati -----
-    filename = "evaluation_results/predictions_v8.csv"  # O "evaluation/predictions.csv"
+    filename = "evaluation_results/predictions_v8_V2.csv" 
     try:
         df = pd.read_csv(filename)
         print(f"Caricati {len(df)} record da {filename}")
@@ -95,7 +95,6 @@ def main():
     def calculate_flicker_rate(df):
         flicker_scores = []
         
-        # MODIFICA QUI: Raggruppa anche per person_id
         # In questo modo calcoliamo la stabilità temporale della singola persona
         grouped = df.groupby(["video_id", "person_id"])
 

@@ -2,15 +2,19 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 from sklearn.metrics import (classification_report, confusion_matrix, roc_auc_score, average_precision_score)
 
 INPUT_CSV = "evaluation_results/predictions_v8_v2.csv"
-OUTPUT_IMAGE = "evaluation_results/confusion_matrix_v8_byvideo.png"
-OUTPUT_TXT_FILE = "evaluation_results/report_video_metrics_v8.txt"
+OUTPUT_IMAGE = "confusion_matrix/by_video/confusion_matrix_v8_v2_byvideo_final"
+OUTPUT_CURVE = "precision_curve_analysis_v8_v2_final.png"
+OUTPUT_TXT_FILE = "text_report/report_video_metrics_v8_v2_final"
+OUTPUT_DIR = "evaluation_results"
 
+'''
 def print_dataset_stats(df):
     """
-    Stampa le statistiche dei VIDEO e i NOMI DEI FILE divisi per categoria (Ground Truth).
+    Stampa le statistiche dei VIDEO, i NOMI DEI FILE e il CONTEGGIO PERSONE.
     Logica: 
     - Priorità: Accoltellamento (2) > Aggressione (1) > Safe (0).
     """
@@ -18,51 +22,66 @@ def print_dataset_stats(df):
     print("=== STATISTICHE E LISTA FILE (GROUND TRUTH) ===")
     print("="*60)
 
-    # 1. Determina la classe reale del video (prendendo il valore massimo)
+    # 1. Determina la classe reale del video
     video_labels = df.groupby('video_id')['true_class'].max()
 
-    # 2. Definisci le categorie
+    # 2. CONTEGGIO PERSONE UNICHE
+    # Usiamo una combinazione di video_id e person_id per identificare univocamente un soggetto
+    unique_subjects = df.groupby(['video_id', 'person_id']).size().reset_index()
+    total_unique_persons = len(unique_subjects)
+
+    # 3. Definisci le categorie
     categories = {
         0: "NON VIOLENTI (Safe)",
         1: "AGGRESSIONE (Rissa/Pugni)",
         2: "ACCOLTELLAMENTO (Arma)"
     }
 
-    # 3. Itera per stampare totali e nomi file
     total_videos = len(video_labels)
     
+    # 4. Stampa statistiche generali
+    print(f"VIDEO TOTALI ANALIZZATI: {total_videos}")
+    print(f"PERSONE TOTALI RILEVATE: {total_unique_persons}")
+    if total_videos > 0:
+        print(f"MEDIA PERSONE PER VIDEO: {total_unique_persons/total_videos:.2f}")
+    print("-" * 60)
+
+    # 5. Itera per ogni categoria
     for class_id, label in categories.items():
-        # Filtra i video che appartengono a questa classe
         files = video_labels[video_labels == class_id].index.tolist()
         count = len(files)
         
-        print(f"\n>>> {label} | Totale: {count} ({count/total_videos*100:.1f}%)")
+        # Conteggio persone per questa specifica categoria
+        mask = df['video_id'].isin(files)
+        persons_in_cat = len(df[mask].groupby(['video_id', 'person_id']))
+        
+        print(f"\n>>> {label} | Video: {count} ({count/total_videos*100:.1f}%) | Persone: {persons_in_cat}")
         print("-" * 40)
         
         if count > 0:
-            # Ordina alfabeticamente per lettura più facile
             for f in sorted(files):
-                print(f"  • {f}")
+                # Conta persone nel singolo video
+                pers_in_video = len(df[df['video_id'] == f].groupby('person_id'))
+                print(f"  • {f:<40} ({pers_in_video} persone)")
         else:
             print("  (Nessun video trovato)")
 
     print("\n" + "="*60 + "\n")
+'''
+# Creazione cartelle se non esistono
+for folder in [OUTPUT_DIR, OUTPUT_DIR + "/text_report", OUTPUT_DIR + "/confusion_matrix/by_video"]:
+    if not os.path.exists(folder):
+        os.makedirs(folder)
 
 # ----- FRAME CONSECUTIVI -----
 def has_consecutive_violence(group, threshold=5):
-    # Ordiniamo per frame per sicurezza
     group = group.sort_values("frame_id")
-    
-    # Creiamo una serie booleana: True se è violento (1 o 2), False se è 0
     is_violent = group["pred_class"] > 0
-    
-    # Calcolo delle sequenze consecutive
     consecutive_groups = is_violent.groupby((is_violent != is_violent.shift()).cumsum())
     
-    # Calcoliamo la dimensione di ogni blocco, ma solo se il blocco è violento
     max_consecutive = 0
     for _, grp in consecutive_groups:
-        if grp.iloc[0]: # Se è un blocco di 'True' (Violenza)
+        if grp.iloc[0]: # Se è True (Violento)
             if len(grp) > max_consecutive:
                 max_consecutive = len(grp)
     
@@ -88,126 +107,129 @@ def calculate_flicker_rate(df):
 def main():
     filename = INPUT_CSV
     
-    # --- CONFIGURAZIONE SOGLIA ---
-    CONSECUTIVE_THRESHOLD = 30
-
     try:
         df = pd.read_csv(filename)
         print(f"Caricati {len(df)} frame totali da {filename}")
     except FileNotFoundError:
         print(f"Errore: Il file {filename} non esiste.")
         return
-    print_dataset_stats(df)
 
     # Pulizia e casting
     df['pred_class'] = pd.to_numeric(df['pred_class'], errors='coerce').fillna(0).astype(int)
     df['true_class'] = pd.to_numeric(df['true_class'], errors='coerce').fillna(0).astype(int)
-
-    # Score unificato per AUC
+    
+    # Score unificato (per eventuale AUC futura)
     df["unified_score"] = df.apply(lambda row: 1.0 if row.get("has_knife", 0) == 1 else row.get("violence_score", 0), axis=1)
 
     # Calcolo Flicker
     avg_flicker = calculate_flicker_rate(df)
+    print(f"Flicker Rate medio del dataset: {avg_flicker:.4f}")
 
-    # ----- ANALISI PER VIDEO -----
-    print(f"Analisi Video in corso (Soglia frame consecutivi: {CONSECUTIVE_THRESHOLD})...")
+    # ----- PREPARAZIONE LISTE PER GRAFICO -----
+    threshold_values = []
+    precision_non_violent = [] # Classe 0
+    precision_violent = []     # Classe 1
+    precision_macro = []       # Media Unita (Macro Avg)
 
-    grouped = df.groupby(['video_id'])
+    # Raggruppamento base (ottimizzazione)
+    grouped_base = list(df.groupby(['video_id'])) 
 
-    y_true_video = []
-    y_pred_video = []
-    y_score_video = [] 
+    # ----- LOOP SOGLIE (da 20 a 40) -----
+    start_thresh = 20
+    end_thresh = 40
+    print(f"\nInizio analisi iterativa per soglie da {start_thresh} a {end_thresh}...")
 
-    for video_id, video_group in grouped:
+    target_names = ["Non Violento", "Violento"]
+
+    for thresh in range(start_thresh, end_thresh + 1):
         
-        # Se c'è violenza vera in qualsiasi punto, il video è violento
-        if video_group['true_class'].max() > 0:
-            video_true_class = 1
-        else:
-            video_true_class = 0
+        y_true_video = []
+        y_pred_video = []
+        y_score_video = [] 
 
-        # --- PREDIZIONE ---
-        video_is_predicted_violent = False
-        
-        # Raggruppiamo per persone all'interno di questo video
-        people_in_video = video_group.groupby('person_id')
-        
-        # Controlliamo per ogni persona quanti frame consecutivi di violenza ci sono
-        for person_id, person_data in people_in_video:
-            # Chiamiamo la funzione che conta i frame consecutivi
-            if has_consecutive_violence(person_data, threshold=CONSECUTIVE_THRESHOLD):
-                video_is_predicted_violent = True
-                break # Basta che una persona sia violenta per marcare il video
-        
-        video_pred_class = 1 if video_is_predicted_violent else 0
-
-        # --- SCORE (Per AUC) ---
-        video_max_score = video_group['unified_score'].max()
-
-        y_true_video.append(video_true_class)
-        y_pred_video.append(video_pred_class)
-        y_score_video.append(video_max_score)
-
-    # Casting array
-    y_true_video = np.array(y_true_video)
-    y_pred_video = np.array(y_pred_video)
-    y_score_video = np.array(y_score_video)
-
-    print(f"Analisi completata su {len(y_true_video)} video unici.")
-
-    # ----- SALVATAGGIO REPORT SU FILE -----
-    
-    with open(OUTPUT_TXT_FILE, "w") as f:
-        
-        # Funzione helper per scrivere sia su console che su file
-        def log(text):
-            print(text)           # Stampa a video
-            f.write(text + "\n")  # Scrive nel file
-
-        # 1. REPORT CLASSIFICAZIONE
-        log("\n" + "=" * 56)
-        log(f"=== REPORT PER VIDEO (Soglia Consecutiva: {CONSECUTIVE_THRESHOLD} frames) ===")
-        log("=" * 56)
-
-        target_names = ["Non Violento", "Violento"]
-        
-        # Generiamo il report come stringa
-        class_report = classification_report(y_true_video, y_pred_video, target_names=target_names, zero_division=0)
-        log(class_report)
-
-        # 2. METRICHE GLOBALI (AUC)
-        if len(np.unique(y_true_video)) > 1:
-            log("\n" + "=" * 56)
-            log("=== METRICHE GLOBALI ===")
+        # Calcolo predizioni per questa soglia
+        for video_id, video_group in grouped_base:
             
-            roc = roc_auc_score(y_true_video, y_score_video)
-            pr = average_precision_score(y_true_video, y_score_video)
+            # Ground Truth Video
+            video_true_class = 1 if video_group['true_class'].max() > 0 else 0
+
+            # Predizione Video
+            video_is_predicted_violent = False
+            people_in_video = video_group.groupby('person_id')
             
-            log(f"ROC-AUC Score : {roc:.4f}")
-            log(f"PR-AUC Score  : {pr:.4f}")
+            for person_id, person_data in people_in_video:
+                if has_consecutive_violence(person_data, threshold=thresh):
+                    video_is_predicted_violent = True
+                    break 
+            
+            video_pred_class = 1 if video_is_predicted_violent else 0
+            
+            y_true_video.append(video_true_class)
+            y_pred_video.append(video_pred_class)
+            y_score_video.append(video_group['unified_score'].max())
 
-        # 3. FLICKER RATE
-        log("\n" + "=" * 56)
-        log(f"FLICKER RATE: {avg_flicker:.4f}")
-        log("=" * 56)
+        y_true_video = np.array(y_true_video)
+        y_pred_video = np.array(y_pred_video)
 
-    print(f"\n[INFO] Report testuale salvato in: {OUTPUT_TXT_FILE}")
+        # --- METRICHE & DATI GRAFICO ---
+        report_dict = classification_report(y_true_video, y_pred_video, target_names=target_names, output_dict=True, zero_division=0)
+        
+        threshold_values.append(thresh)
+        precision_non_violent.append(report_dict["Non Violento"]["precision"])
+        precision_violent.append(report_dict["Violento"]["precision"])
+        precision_macro.append(report_dict["macro avg"]["precision"]) # <--- LINEA "UNITI"
 
-    # ----- SALVATAGGIO GRAFICO MATRICE -----
-    # Confusion Matrix (Questa parte rimane uguale per l'immagine)
-    cm = confusion_matrix(y_true_video, y_pred_video)
-    plt.figure(figsize=(6, 5))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Reds', xticklabels=target_names, yticklabels=target_names)
-    plt.title(f'Confusion Matrix (Video Level)\nThreshold: {CONSECUTIVE_THRESHOLD} consecutive frames')
-    plt.ylabel('Reale')
-    plt.xlabel('Predetto')
-    plt.tight_layout()
+        # --- SALVATAGGIO REPORT TXT ---
+        txt_filename = os.path.join(OUTPUT_DIR, OUTPUT_TXT_FILE+f"_{thresh}.txt")
+        with open(txt_filename, "w") as f:
+            f.write(f"=== REPORT SOGLIA: {thresh} ===\n")
+            f.write(classification_report(y_true_video, y_pred_video, target_names=target_names, zero_division=0))
+            if len(np.unique(y_true_video)) > 1:
+                roc = roc_auc_score(y_true_video, y_score_video)
+                f.write(f"\nROC-AUC Score: {roc:.4f}\n")
+            f.write(f"Flicker Rate: {avg_flicker:.4f}\n")
+
+        # --- SALVATAGGIO MATRICE CONFUSIONE (NO SHOW) ---
+        cm = confusion_matrix(y_true_video, y_pred_video)
+        plt.figure(figsize=(5, 4))
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Reds', xticklabels=target_names, yticklabels=target_names)
+        plt.title(f'CM - Threshold {thresh}')
+        plt.ylabel('Reale')
+        plt.xlabel('Predetto')
+        plt.tight_layout()
+        
+        cm_filename = os.path.join(OUTPUT_DIR, OUTPUT_IMAGE+f"_{thresh}.png")
+        plt.savefig(cm_filename)
+        plt.close() # <--- IMPORTANTE: Chiude il plot senza mostrarlo per non bloccare il loop
+        
+        print(f" > Soglia {thresh}: Precision V = {report_dict['Violento']['precision']:.2f}, Macro = {report_dict['macro avg']['precision']:.2f}")
+
+    # ----- GRAFICO FINALE COMPARATIVO -----
+    print("\nGenerazione grafico finale...")
     
-    # Assicurati di avere definito OUTPUT_IMAGE prima, ad esempio:
-    OUTPUT_IMAGE = "evaluation_results/confusion_matrix_video.png"
-    plt.savefig(OUTPUT_IMAGE, bbox_inches='tight')
-    print(f"[INFO] Grafico salvato in: {OUTPUT_IMAGE}")
+    plt.figure(figsize=(12, 7))
+    
+    # Linea Non Violento (Blu tratteggiata)
+    plt.plot(threshold_values, precision_non_violent, marker='o', label='Non Violento', color='blue', linestyle=':', alpha=0.6)
+    
+    # Linea Violento (Rossa solida - Focus principale)
+    plt.plot(threshold_values, precision_violent, marker='o', label='Violento', color='red', linewidth=2)
 
+    # Linea Uniti / Macro Average (Verde tratteggiata)
+    plt.plot(threshold_values, precision_macro, marker='s', label='Combined (Macro Avg)', color='green', linestyle='--', linewidth=2)
+    
+    plt.title('Precision Analysis: Threshold Selection (20-40 frames)')
+    plt.xlabel('Consecutive Frames Threshold')
+    plt.ylabel('Precision Score')
+    plt.xticks(threshold_values)
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    final_curve_path = os.path.join(OUTPUT_DIR, "precision_curve_comparison.png")
+    plt.savefig(final_curve_path, bbox_inches='tight')
+    print(f"[INFO] Grafico completo salvato in: {final_curve_path}")
+    print(f"[INFO] Matrici di confusione salvate")
+    
     plt.show()
 
 if __name__ == "__main__":
