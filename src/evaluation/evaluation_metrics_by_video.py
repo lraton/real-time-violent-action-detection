@@ -68,7 +68,7 @@ def print_dataset_stats(df):
 
     print("\n" + "="*60 + "\n")
 '''
-# Creazione cartelle se non esistono
+# Creazione cartelle
 for folder in [OUTPUT_DIR, OUTPUT_DIR + "/text_report", OUTPUT_DIR + "/confusion_matrix/by_video"]:
     if not os.path.exists(folder):
         os.makedirs(folder)
@@ -81,10 +81,9 @@ def has_consecutive_violence(group, threshold=5):
     
     max_consecutive = 0
     for _, grp in consecutive_groups:
-        if grp.iloc[0]: # Se è True (Violento)
+        if grp.iloc[0]: 
             if len(grp) > max_consecutive:
                 max_consecutive = len(grp)
-    
     return max_consecutive >= threshold
 
 # ----- FUNZIONE FLICKER RATE -----
@@ -117,25 +116,20 @@ def main():
     # Pulizia e casting
     df['pred_class'] = pd.to_numeric(df['pred_class'], errors='coerce').fillna(0).astype(int)
     df['true_class'] = pd.to_numeric(df['true_class'], errors='coerce').fillna(0).astype(int)
-    
-    # Score unificato (per eventuale AUC futura)
     df["unified_score"] = df.apply(lambda row: 1.0 if row.get("has_knife", 0) == 1 else row.get("violence_score", 0), axis=1)
 
-    # Calcolo Flicker
     avg_flicker = calculate_flicker_rate(df)
     print(f"Flicker Rate medio del dataset: {avg_flicker:.4f}")
 
-    # ----- PREPARAZIONE LISTE PER GRAFICO -----
+    # ----- LISTE PER IL GRAFICO (USIAMO RECALL ORA) -----
     threshold_values = []
-    precision_non_violent = [] # Classe 0
-    precision_violent = []     # Classe 1
-    precision_macro = []       # Media Unita (Macro Avg)
+    recall_non_violent = [] # % Non violenti beccati sul totale dei non violenti
+    recall_violent = []     # % Violenti beccati sul totale dei violenti
+    recall_macro = []       # Media tra i due
 
-    # Raggruppamento base (ottimizzazione)
     grouped_base = list(df.groupby(['video_id'])) 
 
-    # ----- LOOP SOGLIE (da 20 a 40) -----
-    start_thresh = 20
+    start_thresh = 10
     end_thresh = 40
     print(f"\nInizio analisi iterativa per soglie da {start_thresh} a {end_thresh}...")
 
@@ -147,13 +141,9 @@ def main():
         y_pred_video = []
         y_score_video = [] 
 
-        # Calcolo predizioni per questa soglia
         for video_id, video_group in grouped_base:
-            
-            # Ground Truth Video
             video_true_class = 1 if video_group['true_class'].max() > 0 else 0
-
-            # Predizione Video
+            
             video_is_predicted_violent = False
             people_in_video = video_group.groupby('person_id')
             
@@ -163,7 +153,6 @@ def main():
                     break 
             
             video_pred_class = 1 if video_is_predicted_violent else 0
-            
             y_true_video.append(video_true_class)
             y_pred_video.append(video_pred_class)
             y_score_video.append(video_group['unified_score'].max())
@@ -171,16 +160,19 @@ def main():
         y_true_video = np.array(y_true_video)
         y_pred_video = np.array(y_pred_video)
 
-        # --- METRICHE & DATI GRAFICO ---
+        # --- METRICHE ---
         report_dict = classification_report(y_true_video, y_pred_video, target_names=target_names, output_dict=True, zero_division=0)
         
         threshold_values.append(thresh)
-        precision_non_violent.append(report_dict["Non Violento"]["precision"])
-        precision_violent.append(report_dict["Violento"]["precision"])
-        precision_macro.append(report_dict["macro avg"]["precision"]) # <--- LINEA "UNITI"
+        
+        # QUI LA MODIFICA PRINCIPALE: Usiamo 'recall' invece di 'precision'
+        # Recall = (Corretti di quella classe) / (Totale REALE di quella classe)
+        recall_non_violent.append(report_dict["Non Violento"]["recall"])
+        recall_violent.append(report_dict["Violento"]["recall"])
+        recall_macro.append(report_dict["macro avg"]["recall"]) 
 
-        # --- SALVATAGGIO REPORT TXT ---
-        txt_filename = os.path.join(OUTPUT_DIR, OUTPUT_TXT_FILE+f"_{thresh}.txt")
+        # --- SALVATAGGIO REPORT ---
+        txt_filename = os.path.join(OUTPUT_DIR, OUTPUT_TXT_FILE + f"_{thresh}.txt")
         with open(txt_filename, "w") as f:
             f.write(f"=== REPORT SOGLIA: {thresh} ===\n")
             f.write(classification_report(y_true_video, y_pred_video, target_names=target_names, zero_division=0))
@@ -189,7 +181,7 @@ def main():
                 f.write(f"\nROC-AUC Score: {roc:.4f}\n")
             f.write(f"Flicker Rate: {avg_flicker:.4f}\n")
 
-        # --- SALVATAGGIO MATRICE CONFUSIONE (NO SHOW) ---
+        # --- SALVATAGGIO MATRICE ---
         cm = confusion_matrix(y_true_video, y_pred_video)
         plt.figure(figsize=(5, 4))
         sns.heatmap(cm, annot=True, fmt='d', cmap='Reds', xticklabels=target_names, yticklabels=target_names)
@@ -197,38 +189,36 @@ def main():
         plt.ylabel('Reale')
         plt.xlabel('Predetto')
         plt.tight_layout()
-        
-        cm_filename = os.path.join(OUTPUT_DIR, OUTPUT_IMAGE+f"_{thresh}.png")
+        cm_filename = os.path.join(OUTPUT_DIR, OUTPUT_IMAGE + f"_{thresh}.png")
         plt.savefig(cm_filename)
-        plt.close() # <--- IMPORTANTE: Chiude il plot senza mostrarlo per non bloccare il loop
+        plt.close()
         
-        print(f" > Soglia {thresh}: Precision V = {report_dict['Violento']['precision']:.2f}, Macro = {report_dict['macro avg']['precision']:.2f}")
+        print(f" > Soglia {thresh}: Recall V = {report_dict['Violento']['recall']:.2f}, Macro = {report_dict['macro avg']['recall']:.2f}")
 
-    # ----- GRAFICO FINALE COMPARATIVO -----
-    print("\nGenerazione grafico finale...")
+    # ----- GRAFICO RECALL -----
+    print("\nGenerazione grafico finale (Recall/Accuracy per classe)...")
     
     plt.figure(figsize=(12, 7))
     
-    # Linea Non Violento (Blu tratteggiata)
-    plt.plot(threshold_values, precision_non_violent, marker='o', label='Non Violento', color='blue', linestyle=':', alpha=0.6)
+    # 1. Non Violenti (Recall Class 0) - Quanti Safe ho riconosciuto correttamente su tutti i Safe
+    plt.plot(threshold_values, recall_non_violent, marker='o', label='Non Violento (Recall)', color='blue', linestyle=':', alpha=0.6)
     
-    # Linea Violento (Rossa solida - Focus principale)
-    plt.plot(threshold_values, precision_violent, marker='o', label='Violento', color='red', linewidth=2)
+    # 2. Violenti (Recall Class 1) - Quanti Violenti ho riconosciuto su tutti i Violenti
+    plt.plot(threshold_values, recall_violent, marker='o', label='Violento (Recall)', color='red', linewidth=2)
 
-    # Linea Uniti / Macro Average (Verde tratteggiata)
-    plt.plot(threshold_values, precision_macro, marker='s', label='Combined (Macro Avg)', color='green', linestyle='--', linewidth=2)
+    # 3. Macro Average (Media delle due sopra)
+    plt.plot(threshold_values, recall_macro, marker='s', label='Combined (Macro Avg)', color='green', linestyle='--', linewidth=2)
     
-    plt.title('Precision Analysis: Threshold Selection (20-40 frames)')
-    plt.xlabel('Consecutive Frames Threshold')
-    plt.ylabel('Precision Score')
+    plt.title('Performance per Classe (Recall) vs Soglia Frame')
+    plt.xlabel('Frame Consecutivi')
+    plt.ylabel('% Recall')
     plt.xticks(threshold_values)
     plt.legend()
     plt.grid(True, alpha=0.3)
     
-    final_curve_path = os.path.join(OUTPUT_DIR, "precision_curve_comparison.png")
+    final_curve_path = os.path.join(OUTPUT_DIR, OUTPUT_CURVE)
     plt.savefig(final_curve_path, bbox_inches='tight')
-    print(f"[INFO] Grafico completo salvato in: {final_curve_path}")
-    print(f"[INFO] Matrici di confusione salvate")
+    print(f"[INFO] Grafico salvato in: {final_curve_path}")
     
     plt.show()
 

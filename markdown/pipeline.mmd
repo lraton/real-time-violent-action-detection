@@ -1,0 +1,35 @@
+---
+config:
+  layout: dagre
+---
+flowchart LR
+    Input("Input Video Frame") --> Skip("Frame Skipping & Resizing")
+    Skip --> Y_Knife("YOLO Knife Detection") & Y_Pose("YOLO Pose & Tracking")
+    Y_Knife --> K_Box["Knife Bounding Box"]
+    Y_Pose --> P_Data["Keypoints & ID"]
+    P_Data --> Norm("Torso Normalization")
+    Norm --> Buff("Temporal Sequence Buffer")
+    Buff --> LSTM("Violence Bi-LSTM")
+    LSTM --> V_Score["Violence Score"]
+    K_Box --> Logic("Decision & Fusion Logic")
+    V_Score --> Logic
+    Logic --> Render("Visualization & Logging")
+    Render --> Output("Annotated Output Frame")
+
+     Input:::video
+     Skip:::op
+     Y_Knife:::model
+     Y_Pose:::model
+     K_Box:::data
+     P_Data:::data
+     Norm:::op
+     Buff:::data
+     LSTM:::model
+     V_Score:::data
+     Logic:::op
+     Render:::op
+     Output:::video
+    classDef video fill:#98dfba,stroke:#333,stroke-width:1px
+    classDef op fill:#d7bde2,stroke:#333,stroke-width:1px
+    classDef data fill:#9fa8da,stroke:#333,stroke-width:1px
+    classDef model fill:#c0392b,stroke:#333,stroke-width:1px,color:white
