@@ -1,5 +1,4 @@
 import os
-
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 import numpy as np
 import glob
@@ -8,7 +7,6 @@ from tensorflow.keras.layers import LSTM, Dense, Dropout, Masking, Bidirectional
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
-from sklearn.metrics import classification_report
 from sklearn.utils.class_weight import compute_class_weight
 
 # --- CONFIGURAZIONE ---

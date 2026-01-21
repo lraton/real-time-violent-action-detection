@@ -1,3 +1,10 @@
+Caricamento file .npz...
+Totale sequenze: 17727
+Preprocessing e Normalizzazione...
+Forma finale X: (17727, 150, 51), y: (17727,)
+Train: (11344, 150, 51), Val: (2837, 150, 51), Test: (3546, 150, 51)
+Pesi calcolati (0=NonViolento, 1=Violento): {0: np.float64(1.0097917037564537), 1: np.float64(0.9903963680810197)}
+Creazione modello Bidirectional LSTM...
 Model: "sequential"
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┓
 ┃ Layer (type)                         ┃ Output Shape                ┃         Param # ┃
@@ -90,3 +97,10 @@ Non Violento       0.86      0.72      0.78      1756
     accuracy                           0.80      3546
    macro avg       0.81      0.80      0.80      3546
 weighted avg       0.81      0.80      0.80      3546
+
+
+17727
+
+14004
+3540
+183
