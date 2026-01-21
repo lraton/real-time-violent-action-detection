@@ -1,0 +1,12 @@
+=== REPORT SOGLIA: 16 ===
+              precision    recall  f1-score   support
+
+Non Violento       0.71      0.63      0.67        19
+    Violento       0.81      0.85      0.83        34
+
+    accuracy                           0.77        53
+   macro avg       0.76      0.74      0.75        53
+weighted avg       0.77      0.77      0.77        53
+
+ROC-AUC Score: 0.6749
+Flicker Rate: 0.0202
