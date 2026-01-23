@@ -39,7 +39,7 @@ The workflow consists of four main stages:
 
 ---
 
-![Pipeline Violence Detection System App](img/pipelineLR.png)
+![Pipeline Violence Detection System App](img/pipeline-smol-lr.png)
 
 ---
 

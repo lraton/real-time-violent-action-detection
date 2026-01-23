@@ -1,31 +1,42 @@
 ---
 config:
-  layout: dagre
+  layout: fixed
 ---
 flowchart LR
-    Input("Input Video Frame") --> Skip("Frame Skipping & Resizing")
-    Skip --> Y_Knife("YOLO Knife Detection") & Y_Pose("YOLO Pose & Tracking")
-    Y_Knife --> K_Box["Knife Bounding Box"]
-    Y_Pose --> P_Data["Keypoints & ID"]
-    P_Data --> Norm("Torso Normalization")
-    Norm --> Buff("Temporal Sequence Buffer")
-    Buff --> LSTM("Violence Bi-LSTM")
-    LSTM --> V_Score["Violence Score"]
-    K_Box --> Logic("Decision & Fusion Logic")
-    V_Score --> Logic
+ subgraph Detection_Stream["Analisi Visuale"]
+        Y_Knife("YOLO Knife Detection")
+        Y_Pose("YOLO Pose Estimation")
+  end
+ subgraph Temporal_Stream["Analisi Temporale"]
+        Tracker("Person Tracking")
+        Buffer("Keypoints Buffer")
+        LSTM("Violence LSTM Classifier")
+  end
+ subgraph s1["Legenda:"]
+        L1("I/O")
+        L2("Modelli AI")
+        L3("Logica")
+        L4("Strutture Dati")
+  end
+    Input("Input Video Frame") --> Y_Knife & Y_Pose
+    Y_Pose --> Tracker
+    Tracker --> Buffer
+    Buffer --> LSTM
+    Y_Knife --> Logic("Decision & Fusion Logic")
+    LSTM --> Logic
     Logic --> Render("Visualization & Logging")
     Render --> Output("Annotated Output Frame")
 
-     Input:::video
-     Skip:::op
      Y_Knife:::model
      Y_Pose:::model
-     K_Box:::data
-     P_Data:::data
-     Norm:::op
-     Buff:::data
+     Tracker:::op
+     Buffer:::data
      LSTM:::model
-     V_Score:::data
+     L1:::video
+     L2:::model
+     L3:::op
+     L4:::data
+     Input:::video
      Logic:::op
      Render:::op
      Output:::video
