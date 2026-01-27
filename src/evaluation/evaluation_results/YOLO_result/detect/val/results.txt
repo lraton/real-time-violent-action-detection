@@ -1,0 +1,2 @@
+                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 44/44 4.7it/s 9.3s
+                   all        704        779       0.89      0.825       0.91      0.612

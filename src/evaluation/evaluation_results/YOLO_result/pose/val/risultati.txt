@@ -1,0 +1,45 @@
+val: New cache created: D:\Codes\RT-Detection-System-for-Suspicious-Stabbing-Movements\src\datasets\coco-pose\labels\val2017.cache
+                 Class     Images  Instances      Box(P          R      mAP50  mAP50-95)     Pose(P          R      mAP50  mAP50-95): 100% ━━━━━━━━━━━━ 147/147 4.4it/s 33.7s
+                   all       2346       6352      0.889      0.826      0.921       0.71      0.849       0.76       0.81      0.511
+Speed: 0.2ms preprocess, 4.6ms inference, 0.0ms loss, 1.2ms postprocess per image
+Saving D:\Codes\RT-Detection-System-for-Suspicious-Stabbing-Movements\datasets\runs\pose\val3\predictions.json...
+
+Evaluating faster-coco-eval mAP using D:\Codes\RT-Detection-System-for-Suspicious-Stabbing-Movements\datasets\runs\pose\val3\predictions.json and D:\Codes\RT-Detection-System-for-Suspicious-Stabbing-Movements\src\datasets\coco-pose\annotations\person_keypoints_val2017.json...
+Evaluate annotation type *bbox*
+COCOeval_opt.evaluate() finished...
+DONE (t=0.64s).
+Accumulating evaluation results...
+COCOeval_opt.accumulate() finished...
+DONE (t=0.00s).
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.533
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.719
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.588
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.205
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.658
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.799
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.210
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.549
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.621
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.233
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.749
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.865
+ Average Recall     (AR) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.810
+ Average Recall     (AR) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.689
+Evaluate annotation type *keypoints*
+COCOeval_opt.evaluate() finished...
+DONE (t=6.38s).
+Accumulating evaluation results...
+COCOeval_opt.accumulate() finished...
+DONE (t=0.00s).
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.499
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.806
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.534
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = 0.436
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.609
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.577
+ Average Recall     (AR) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.859
+ Average Recall     (AR) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.622
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = 0.496
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.689
+Results saved to D:\Codes\RT-Detection-System-for-Suspicious-Stabbing-Movements\datasets\runs\pose\val3
+ Learn more at https://docs.ultralytics.com/modes/val

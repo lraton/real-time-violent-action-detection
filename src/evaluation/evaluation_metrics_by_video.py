@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
-from sklearn.metrics import (classification_report, confusion_matrix, roc_auc_score, average_precision_score)
+from sklearn.metrics import (classification_report, confusion_matrix, roc_auc_score, average_precision_score,roc_curve, auc)
 
 INPUT_CSV = "evaluation_results/predictions_v8_v2.csv"
 OUTPUT_IMAGE = "confusion_matrix/by_video/confusion_matrix_v8_v2_byvideo_final"
@@ -180,6 +180,39 @@ def main():
                 roc = roc_auc_score(y_true_video, y_score_video)
                 f.write(f"\nROC-AUC Score: {roc:.4f}\n")
             f.write(f"Flicker Rate: {avg_flicker:.4f}\n")
+        # --- SALVATAGGIO ROC CURVE ---
+        fpr, tpr, thresholds = roc_curve(y_true_video, y_score_video)
+        roc_auc = auc(fpr, tpr)
+
+        plt.figure(figsize=(8, 6))
+        plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.4f})')
+        plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+
+        # Cerchiamo nell'array 'thresholds' il valore più vicino alla tua variabile 'thresh'
+        idx = (np.abs(thresholds - thresh)).argmin()
+        current_fpr = fpr[idx]
+        current_tpr = tpr[idx]
+
+        # Disegna un pallino rosso sulla curva
+        plt.plot(current_fpr, current_tpr, marker='o', markersize=8, color="red", label=f'Soglia scelta ({thresh})')
+
+        # Testo per le coordinate 
+        plt.text(current_fpr + 0.02, current_tpr - 0.05, 
+                f"FPR={current_fpr:.2f}\nTPR={current_tpr:.2f}", 
+                color="red", fontsize=9)
+
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title(f'ROC Curve - Soglia evidenziata: {thresh}')
+        plt.legend(loc="lower right")
+        plt.grid(alpha=0.3)
+
+        # Salvataggio
+        img_filename = txt_filename.replace(".txt", f"_ROC_{thresh}.png")
+        plt.savefig(img_filename)
+        plt.close()
 
         # --- SALVATAGGIO MATRICE ---
         cm = confusion_matrix(y_true_video, y_pred_video)

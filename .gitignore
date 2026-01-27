@@ -5,6 +5,7 @@ src/__pycache__/
 src/logs/
 src/suspect/
 datasets/video-dataset/
+datasets/coco-pose
 OIDv4_ToolKit/
 src/evaluation/__pycache__
 datasets/lstm_dataset/violent_videoÐàðáð£Ðêð¦ð£ÐêðÉðæÐåð¡ÔöÉÐàðƒð+Ðåð¡ðÁÐàÔòòð¥ÐåÔöñÔòøÐåðÖðúÐåð«ÔòóÐÅÔòØð£ÐäÔòòðøÐäÔòòðÉÐçðÀðóÐåð¼ðÖÐäÔòæÔòæÐêðÀðæÐåð¢ÔòùÐçðÁð«ÐäÔòæðûÐÅÔòØð£Ðçð½ðíÐåð×ðÀÐåðøðØÐäÔòòðøÐåðôð©ÐçðôðÿÐçðñÔòùÐëð¡ð¦ÐÅÔòØðæ_urlgot_222_cam4_person1.npz
