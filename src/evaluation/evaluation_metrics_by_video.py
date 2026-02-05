@@ -184,8 +184,10 @@ def main():
         fpr, tpr, thresholds = roc_curve(y_true_video, y_score_video)
         roc_auc = auc(fpr, tpr)
 
-        plt.figure(figsize=(8, 6))
-        plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.4f})')
+        font_size = 20 # Font coerente con gli altri grafici
+
+        plt.figure(figsize=(10, 8)) # Leggermente più grande per far stare tutto bene
+        plt.plot(fpr, tpr, color='darkorange', lw=3, label=f'ROC curve (area = {roc_auc:.4f})')
         plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
 
         # Cerchiamo nell'array 'thresholds' il valore più vicino alla tua variabile 'thresh'
@@ -194,30 +196,37 @@ def main():
         current_tpr = tpr[idx]
 
         # Disegna un pallino rosso sulla curva
-        plt.plot(current_fpr, current_tpr, marker='o', markersize=8, color="red", label=f'Soglia scelta ({thresh})')
+        plt.plot(current_fpr, current_tpr, marker='o', markersize=12, color="red", label=f'Soglia scelta ({thresh})')
 
-        # Testo per le coordinate 
-        plt.text(current_fpr + 0.02, current_tpr - 0.05, 
+        # Testo per le coordinate (aumentato a 14 per leggibilità, 20 sarebbe troppo grande qui)
+        plt.text(current_fpr + 0.03, current_tpr - 0.08, 
                 f"FPR={current_fpr:.2f}\nTPR={current_tpr:.2f}", 
-                color="red", fontsize=9)
+                color="red", fontsize=font_size - 4, fontweight='bold')
 
+        # Configurazione Assi e Titoli
         plt.xlim([0.0, 1.0])
         plt.ylim([0.0, 1.05])
-        plt.xlabel('False Positive Rate')
-        plt.ylabel('True Positive Rate')
-        plt.title(f'ROC Curve - Soglia evidenziata: {thresh}')
-        plt.legend(loc="lower right")
+        plt.xlabel('False Positive Rate', fontsize=font_size)
+        plt.ylabel('True Positive Rate', fontsize=font_size)
+        plt.title(f'ROC Curve - Soglia: {thresh}', fontsize=font_size + 2)
+
+        # Numeri sugli assi
+        plt.xticks(fontsize=font_size)
+        plt.yticks(fontsize=font_size)
+
+        # Legenda
+        plt.legend(loc="lower right", fontsize=font_size - 6)
         plt.grid(alpha=0.3)
 
         # Salvataggio
         img_filename = txt_filename.replace(".txt", f"_ROC_{thresh}.png")
-        plt.savefig(img_filename)
+        plt.savefig(img_filename, bbox_inches='tight')
         plt.close()
 
         # --- SALVATAGGIO MATRICE ---
         cm = confusion_matrix(y_true_video, y_pred_video)
         plt.figure(figsize=(5, 4))
-        sns.heatmap(cm, annot=True, fmt='d', cmap='Reds', xticklabels=target_names, yticklabels=target_names)
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Reds', annot_kws={"size": 20},xticklabels=target_names, yticklabels=target_names)
         plt.title(f'CM - Threshold {thresh}')
         plt.ylabel('Reale')
         plt.xlabel('Predetto')
@@ -230,29 +239,41 @@ def main():
 
     # ----- GRAFICO RECALL -----
     print("\nGenerazione grafico finale (Recall/Accuracy per classe)...")
-    
-    plt.figure(figsize=(12, 7))
-    
-    # 1. Non Violenti (Recall Class 0) - Quanti Safe ho riconosciuto correttamente su tutti i Safe
-    plt.plot(threshold_values, recall_non_violent, marker='o', label='Non Violento (Recall)', color='blue', linestyle=':', alpha=0.6)
-    
-    # 2. Violenti (Recall Class 1) - Quanti Violenti ho riconosciuto su tutti i Violenti
-    plt.plot(threshold_values, recall_violent, marker='o', label='Violento (Recall)', color='red', linewidth=2)
 
-    # 3. Macro Average (Media delle due sopra)
-    plt.plot(threshold_values, recall_macro, marker='s', label='Combined (Macro Avg)', color='green', linestyle='--', linewidth=2)
-    
-    plt.title('Performance per Classe (Recall) vs Soglia Frame')
-    plt.xlabel('Frame Consecutivi')
-    plt.ylabel('% Recall')
-    plt.xticks(threshold_values)
-    plt.legend()
+    font_size = 20 # Variabile centrale per il font
+
+    plt.figure(figsize=(12, 7))
+
+    # Non Violenti (Recall Class 0)
+    plt.plot(threshold_values, recall_non_violent, marker='o', label='Non Violento (Recall)', 
+            color='blue', linestyle=':', alpha=0.6, markersize=8)
+
+    # Violenti (Recall Class 1)
+    plt.plot(threshold_values, recall_violent, marker='o', label='Violento (Recall)', 
+            color='red', linewidth=2, markersize=8)
+
+    # Macro Average (Media delle due sopra)
+    plt.plot(threshold_values, recall_macro, marker='s', label='Combined (Macro Avg)', 
+            color='green', linestyle='--', linewidth=2, markersize=8)
+
+    # Configurazione testi con font 20
+    plt.title('Performance per Classe (Recall) vs Soglia Frame', fontsize=font_size + 4)
+    plt.xlabel('Frame Consecutivi', fontsize=font_size)
+    plt.ylabel('% Recall', fontsize=font_size)
+
+    # Regolazione numeri sugli assi (ticks)
+    plt.xticks(threshold_values, fontsize=font_size-5)
+    plt.yticks(fontsize=font_size)
+
+    # Legenda con font personalizzato
+    plt.legend(fontsize=font_size - 4) # Leggermente più piccola per non coprire i dati
+
     plt.grid(True, alpha=0.3)
-    
+
     final_curve_path = os.path.join(OUTPUT_DIR, OUTPUT_CURVE)
     plt.savefig(final_curve_path, bbox_inches='tight')
     print(f"[INFO] Grafico salvato in: {final_curve_path}")
-    
+
     plt.show()
 
 if __name__ == "__main__":
