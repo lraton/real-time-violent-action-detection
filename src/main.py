@@ -91,6 +91,7 @@ class UI:
         # Video container
         self.video_container = tk.Frame(self.left_panel, bg=self.bg_video, relief="flat")
         self.video_container.pack(fill="both", expand=True, padx=15, pady=(0, 15))
+        self.video_container.pack_propagate(False)
 
         # Messaggio iniziale / Placeholder
         self.empty_label = tk.Label(self.video_container,
@@ -312,7 +313,7 @@ class UI:
 
     def suspect_folder(self):
         import os
-        suspect_folder_path = os.path.abspath("../suspect/")
+        suspect_folder_path = os.path.abspath("suspect/")
         if not os.path.exists(suspect_folder_path):
             os.makedirs(suspect_folder_path)
         os.startfile(suspect_folder_path)
@@ -379,14 +380,24 @@ class UI:
 
         # Resize e Update Video Image
         if self.video_label:
-            label_width = self.video_label.winfo_width()
-            label_height = self.video_label.winfo_height()
+            container_w = self.video_container.winfo_width()
+            container_h = self.video_container.winfo_height() - 40 # Sottraiamo lo spazio dell'header FPS
 
-            if label_width < 10: label_width = 800
-            if label_height < 10: label_height = 600
+            if container_w < 100: container_w = 800 # Fallback iniziale
+            if container_h < 100: container_h = 600
 
-            # Resize mantenendo aspect ratio o riempiendo (qui riempiamo per semplicità come nel codice orig)
-            frame_resized = cv2.resize(frame_drawn, (label_width, label_height))
+            # Opzionale: Calcola aspect ratio per non schiacciare l'immagine
+            h, w = frame_drawn.shape[:2]
+            aspect = w / h
+            
+            if container_w / container_h > aspect:
+                new_h = container_h
+                new_w = int(aspect * new_h)
+            else:
+                new_w = container_w
+                new_h = int(new_w / aspect)
+
+            frame_resized = cv2.resize(frame_drawn, (new_w, new_h))
             
             cv2image = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
             img = Image.fromarray(cv2image)

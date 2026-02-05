@@ -1,3 +1,4 @@
+import random 
 import cv2
 import os
 import time
@@ -46,8 +47,6 @@ class ViolenceDetectionSystem:
     # --- METODO PRINCIPALE CHIAMATO DAL MAIN ---
     def process_frame(self, frame, frame_skip):
         t_start = time.time()
-        # Salva una copia pulita per l'estrazione dei volti
-        clean_frame = frame.copy()
 
         # Rileva oggetti (coltelli)
         t_obj_start = time.time()
@@ -61,13 +60,11 @@ class ViolenceDetectionSystem:
 
         # Processa i risultati delle pose
         t_logic_start = time.time()
-        person_data, person_strings_for_list = self.detect_pose(results_pose, detected_items, clean_frame, frame_skip)
+        person_data, person_strings_for_list = self.detect_pose(results_pose, detected_items, frame, frame_skip)
         t_logic = (time.time() - t_logic_start) * 1000  # in ms
 
-        # Disegna box persone
-        # Disegna box persone per tutte le persone
+        # Disegna i risultati sul frame
         t_draw_start = time.time()
-        # Disegna oggetti e etichette persone e box
         frame_drawn = self.draw_detections(frame, detected_items, person_data)
         t_draw = (time.time() - t_draw_start) * 1000  # in ms
 
@@ -316,7 +313,7 @@ class ViolenceDetectionSystem:
 
         # Non predire se abbiamo troppi pochi frame per una stima sensata
         if len(current_sequence) < (30 / frame_skip):  # Inizio predizione dopo almeno 30 frame validi o in base a quanti richiesti (massimo 150)
-            return None
+            return None                
 
         try:
             # Filtro movimento (disabilitato per ora)
