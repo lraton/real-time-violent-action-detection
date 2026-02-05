@@ -15,6 +15,9 @@ class VideoStream:
         self.old_all_detected_strings = []
         self.prev_time = time.time()
         self.fps = 0
+        self.font_title = ("Courier New", 28, "bold") # Era 24
+        self.font_header = ("Courier New", 18, "bold") # Era 14
+        self.font_body = ("Courier New", 14, "bold")   # Era 12/10
 
     def release(self):
         if self.cap is not None:
@@ -409,6 +412,7 @@ class UI:
 
 def main():
     root = tk.Tk()
+    root.tk.call('tk', 'scaling', 2.0)
     app = UI(root)
 
     app.app = ViolenceDetectionSystem(knife_model_path="../models/knife/run2/weights/best.pt",

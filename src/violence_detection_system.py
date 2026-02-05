@@ -47,7 +47,7 @@ class ViolenceDetectionSystem:
     def process_frame(self, frame, frame_skip):
         t_start = time.time()
         # Salva una copia pulita per l'estrazione dei volti
-        clean_frame_for_save = frame.copy()
+        clean_frame = frame.copy()
 
         # Rileva oggetti (coltelli)
         t_obj_start = time.time()
@@ -61,20 +61,15 @@ class ViolenceDetectionSystem:
 
         # Processa i risultati delle pose
         t_logic_start = time.time()
-        person_data, person_strings_for_list = self.detect_pose(results_pose, detected_items, clean_frame_for_save, frame_skip)
+        person_data, person_strings_for_list = self.detect_pose(results_pose, detected_items, clean_frame, frame_skip)
         t_logic = (time.time() - t_logic_start) * 1000  # in ms
 
         # Disegna box persone
         # Disegna box persone per tutte le persone
         t_draw_start = time.time()
-        frame_drawn = frame.copy()
-        for data in person_data:
-            x1, y1, x2, y2 = data["box"]
-            cv2.rectangle(frame_drawn, (x1, y1), (x2, y2), data["color"], 2)
+        # Disegna oggetti e etichette persone e box
+        frame_drawn = self.draw_detections(frame, detected_items, person_data)
         t_draw = (time.time() - t_draw_start) * 1000  # in ms
-
-        # Disegna oggetti e etichette persone
-        frame_drawn = self.draw_detections(frame_drawn, detected_items, person_data)
 
         # Prepara la lista di stringhe per la GUI
         object_strings = {f"{obj['class']} {obj['conf']:.2f}" for obj in detected_items}
@@ -211,6 +206,8 @@ class ViolenceDetectionSystem:
 
         # Disegna etichette stato persone (Violenta/Sospetto)
         for data in person_data:
+            x1, y1, x2, y2 = data["box"]
+            cv2.rectangle(frame, (x1, y1), (x2, y2), data["color"], 2)
             cv2.putText(frame, data["label"], data["pos"], self.FONT, self.FONT_SCALE, data["color"], self.FONT_THICKNESS)
 
         return frame
