@@ -16,6 +16,16 @@ This project implements a multi-stage pipeline to identify violent intent in rea
 
 ---
 
+## Demo
+
+Test videos of the system detecting suspicious stabbing movements can be seen here:
+
+https://www.youtube.com/playlist?list=PLo1f0U_Wr1t2QE8hyGbKqB8WCAeb5DOUH
+
+The playlist includes multiple real-world test scenarios showing both violent and non-violent actions processed by the detection pipeline.
+
+---
+
 ## System Architecture
 
 The workflow consists of four main stages:
